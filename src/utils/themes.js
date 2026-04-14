@@ -1,0 +1,37 @@
+// Theme colors
+export const themes = {
+  light: {
+    bg: '#ffffff',
+    bgSecondary: '#f3f4f6',
+    bgTertiary: '#f9fafb',
+    text: '#111827',
+    textSecondary: '#6b7280',
+    textTertiary: '#9ca3af',
+    border: '#e5e7eb',
+    borderLight: '#f3f4f6',
+    cardBg: '#ffffff',
+    cardHover: '#f9fafb',
+    tabActive: '#2563eb',
+    tabInactive: '#f3f4f6',
+    scrollBg: 'rgba(255,255,255,0.95)',
+    accentFrom: '#3b82f6',
+    accentTo: '#a855f7',
+  },
+  dark: {
+    bg: '#0f172a',
+    bgSecondary: '#1e293b',
+    bgTertiary: '#0f172a',
+    text: '#f1f5f9',
+    textSecondary: '#cbd5e1',
+    textTertiary: '#94a3b8',
+    border: '#334155',
+    borderLight: '#475569',
+    cardBg: '#1e293b',
+    cardHover: '#334155',
+    tabActive: '#3b82f6',
+    tabInactive: '#334155',
+    scrollBg: 'rgba(30, 41, 59, 0.95)',
+    accentFrom: '#3b82f6',
+    accentTo: '#a855f7',
+  }
+};
