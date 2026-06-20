@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { LoginPage } from './components/LoginPage';
-import data from './sample-data.json';
+import rawData from './sample-data.json';
 import LinkCollectionsApp from './components/Linkcollectionsapp';
+
+const data = {
+  ...rawData,
+  email: import.meta.env.VITE_APP_EMAIL,
+  password: import.meta.env.VITE_APP_PASSWORD,
+};
 
 export default function App() {
   // Initialize theme directly from localStorage
@@ -25,7 +31,7 @@ export default function App() {
   });
 
   // No async work anymore, so no loading state needed
-  const isLoading = false;
+  // const isLoading = false;
 
   const handleLoginSuccess = () => {
     setIsLoggedIn(true);
@@ -41,23 +47,23 @@ export default function App() {
     localStorage.setItem('linkapp-theme', newTheme);
   };
 
-  if (isLoading) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, #f9fafb 0%, #ffffff 100%)',
-          fontSize: '18px',
-          color: '#666',
-        }}
-      >
-        Loading...
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div
+  //       style={{
+  //         minHeight: '100vh',
+  //         display: 'flex',
+  //         alignItems: 'center',
+  //         justifyContent: 'center',
+  //         background: 'linear-gradient(135deg, #f9fafb 0%, #ffffff 100%)',
+  //         fontSize: '18px',
+  //         color: '#666',
+  //       }}
+  //     >
+  //       Loading...
+  //     </div>
+  //   );
+  // }
 
   if (!isLoggedIn) {
     return (
