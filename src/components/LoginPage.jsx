@@ -39,6 +39,8 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
     <div
       style={{
         minHeight: '100vh',
+        height: '100%',
+        overflowY: 'auto',
         backgroundColor: colors.bg,
         background: isDark
           ? 'radial-gradient(ellipse at top, #181824 0%, #09090b 100%)'

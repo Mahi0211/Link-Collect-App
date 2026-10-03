@@ -103,6 +103,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     return Number(localStorage.getItem('linkapp-items-per-page')) || 12;
   });
   const mainContentRef = useRef(null);
+  const mainFrameRef = useRef(null);
 
   // Reset pagination on navigation or filter changes
   useEffect(() => {
@@ -111,6 +112,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
+    mainFrameRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     mainContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -594,7 +596,11 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   return (
     <div
       style={{
-        minHeight: '100vh',
+        height: '100vh',
+        maxHeight: '100vh',
+        width: '100vw',
+        maxWidth: '100vw',
+        overflow: 'hidden',
         backgroundColor: colors.bg,
         color: colors.text,
         display: 'flex',
@@ -633,7 +639,19 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
       />
 
       {/* Main Workspace Frame */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div
+        ref={mainFrameRef}
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          height: '100vh',
+          maxHeight: '100vh',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}
+      >
         {/* Top Omnibar Header */}
         <Header
           searchQuery={searchQuery}

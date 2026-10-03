@@ -98,18 +98,19 @@ export const Sidebar = ({
       {/* Main Sidebar Shell */}
       <aside
         style={{
-          position: isMobile ? 'fixed' : 'sticky',
+          position: isMobile ? 'fixed' : 'relative',
           top: 0,
           left: 0,
           bottom: 0,
           width: isMobile ? '280px' : (isOpen ? '260px' : '0px'),
           maxWidth: '85vw',
           backgroundColor: isDark ? colors.sidebarBg : '#ffffff',
-          borderRight: `1px solid ${colors.border}`,
+          borderRight: (!isMobile && !isOpen) ? 'none' : `1px solid ${colors.border}`,
           height: '100vh',
+          maxHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          zIndex: isMobile ? 100 : 45,
+          zIndex: isMobile ? 100 : 20,
           transform: isMobile ? (isOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
           transition: isMobile
             ? 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
