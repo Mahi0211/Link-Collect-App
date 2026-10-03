@@ -1,288 +1,268 @@
 import React, { useState } from 'react';
+import { Layers, Mail, Lock, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { themes } from '../utils/themes';
 
-export function LoginPage({ data, onLoginSuccess, theme }) {
+export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const themes = {
-    light: {
-      bg: '#ffffff',
-      bgSecondary: '#f3f4f6',
-      text: '#111827',
-      textSecondary: '#6b7280',
-      border: '#e5e7eb',
-      accentFrom: '#3b82f6',
-      accentTo: '#a855f7',
-    },
-    dark: {
-      bg: '#0f172a',
-      bgSecondary: '#1e293b',
-      text: '#f1f5f9',
-      textSecondary: '#cbd5e1',
-      border: '#334155',
-      accentFrom: '#3b82f6',
-      accentTo: '#a855f7',
-    }
-  };
-
-  const colors = themes[theme];
+  const colors = themes[theme] || themes.dark;
+  const isDark = theme === 'dark';
 
   const handleLogin = (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Simulate a small delay for better UX
     setTimeout(() => {
-      // Check credentials
       if (email === data.email && password === data.password) {
-        // Store login info in localStorage
-        localStorage.setItem('linkapp-user', JSON.stringify({
-          email: data.email,
-          username: data.username,
-          isLoggedIn: true,
-          loginTime: new Date().toISOString(),
-        }));
-        
+        localStorage.setItem(
+          'linkapp-user',
+          JSON.stringify({
+            email: data.email,
+            username: data.username,
+            isLoggedIn: true,
+            loginTime: new Date().toISOString(),
+          })
+        );
         onLoginSuccess();
       } else {
         setError('Invalid email or password');
         setLoading(false);
       }
-    }, 500);
+    }, 450);
   };
 
   return (
     <div
       style={{
         minHeight: '100vh',
-        background: theme === 'light'
-          ? 'linear-gradient(135deg, #f9fafb 0%, #ffffff 100%)'
-          : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        backgroundColor: colors.bg,
+        background: isDark
+          ? 'radial-gradient(ellipse at top, #181824 0%, #09090b 100%)'
+          : 'radial-gradient(ellipse at top, #f1f5f9 0%, #ffffff 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '1rem',
+        padding: '24px',
+        fontFamily: 'var(--font-sans)',
       }}
     >
       <div
         style={{
-          backgroundColor: colors.bg,
-          border: `0.5px solid ${colors.border}`,
-          borderRadius: '16px',
-          padding: '2.5rem',
+          backgroundColor: isDark ? colors.cardBg : '#ffffff',
+          border: `1px solid ${colors.border}`,
+          borderRadius: '20px',
+          padding: '36px 32px',
           width: '100%',
-          maxWidth: '400px',
-          boxShadow: theme === 'dark'
-            ? '0 20px 25px -5px rgba(0,0,0,0.3)'
-            : '0 20px 25px -5px rgba(0,0,0,0.1)',
+          maxWidth: '420px',
+          boxShadow: isDark
+            ? '0 25px 50px -12px rgba(0, 0, 0, 0.7)'
+            : '0 20px 40px -15px rgba(0, 0, 0, 0.1)',
+          animation: 'scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         }}
       >
-        {/* Logo/Title */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        {/* Brand Icon & Heading */}
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '14px',
+              background: `linear-gradient(135deg, ${colors.accentFrom}, ${colors.accentTo})`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              margin: '0 auto 16px auto',
+              boxShadow: `0 8px 20px ${colors.accentLight}`,
+            }}
+          >
+            <Layers size={24} />
+          </div>
+
           <h1
             style={{
-              fontSize: '28px',
-              fontWeight: '600',
-              margin: '0 0 0.5rem 0',
+              fontSize: '24px',
+              fontWeight: '700',
+              margin: '0 0 6px 0',
+              letterSpacing: '-0.02em',
+              fontFamily: 'var(--font-heading)',
               color: colors.text,
             }}
           >
-            {data.name}
+            Welcome to LinkCollect
           </h1>
           <p
             style={{
-              fontSize: '14px',
+              fontSize: '13.5px',
               color: colors.textSecondary,
               margin: 0,
             }}
           >
-            Your personal link organizer
+            Your intelligent link curation & bookmark workspace
           </p>
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleLogin} style={{ marginBottom: '1.5rem' }}>
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Email Input */}
-          <div style={{ marginBottom: '1rem' }}>
+          <div>
             <label
               style={{
                 display: 'block',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: colors.text,
-                marginBottom: '0.5rem',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: colors.textSecondary,
+                marginBottom: '6px',
               }}
             >
-              Email
+              Email Address
             </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError('');
-              }}
-              placeholder="Enter your email"
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                borderRadius: '8px',
-                border: `1px solid ${colors.border}`,
-                backgroundColor: colors.bgSecondary,
-                color: colors.text,
-                fontSize: '14px',
-                outline: 'none',
-                transition: 'all 0.3s ease',
-                boxSizing: 'border-box',
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = colors.accentFrom;
-                e.target.style.backgroundColor = colors.bg;
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = colors.border;
-                e.target.style.backgroundColor = colors.bgSecondary;
-              }}
-              disabled={loading}
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Mail size={16} style={{ position: 'absolute', left: '12px', color: colors.textTertiary }} />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
+                placeholder="name@example.com"
+                required
+                style={{
+                  width: '100%',
+                  padding: '11px 14px 11px 38px',
+                  borderRadius: '10px',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                  color: colors.text,
+                  fontSize: '13.5px',
+                  outline: 'none',
+                  transition: 'all 0.15s ease',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = colors.accent;
+                  e.target.style.backgroundColor = isDark ? '#1a1a22' : '#ffffff';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = colors.border;
+                  e.target.style.backgroundColor = isDark ? colors.bgTertiary : '#f8fafc';
+                }}
+                disabled={loading}
+              />
+            </div>
           </div>
 
           {/* Password Input */}
-          <div style={{ marginBottom: '1.5rem' }}>
+          <div>
             <label
               style={{
                 display: 'block',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: colors.text,
-                marginBottom: '0.5rem',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: colors.textSecondary,
+                marginBottom: '6px',
               }}
             >
               Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError('');
-              }}
-              placeholder="Enter your password"
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                borderRadius: '8px',
-                border: `1px solid ${colors.border}`,
-                backgroundColor: colors.bgSecondary,
-                color: colors.text,
-                fontSize: '14px',
-                outline: 'none',
-                transition: 'all 0.3s ease',
-                boxSizing: 'border-box',
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = colors.accentFrom;
-                e.target.style.backgroundColor = colors.bg;
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = colors.border;
-                e.target.style.backgroundColor = colors.bgSecondary;
-              }}
-              disabled={loading}
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Lock size={16} style={{ position: 'absolute', left: '12px', color: colors.textTertiary }} />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
+                placeholder="••••••••"
+                required
+                style={{
+                  width: '100%',
+                  padding: '11px 14px 11px 38px',
+                  borderRadius: '10px',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                  color: colors.text,
+                  fontSize: '13.5px',
+                  outline: 'none',
+                  transition: 'all 0.15s ease',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = colors.accent;
+                  e.target.style.backgroundColor = isDark ? '#1a1a22' : '#ffffff';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = colors.border;
+                  e.target.style.backgroundColor = isDark ? colors.bgTertiary : '#f8fafc';
+                }}
+                disabled={loading}
+              />
+            </div>
           </div>
 
           {/* Error Message */}
           {error && (
             <div
               style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
+                backgroundColor: colors.dangerLight,
+                border: `1px solid ${colors.danger}40`,
                 borderRadius: '8px',
-                padding: '12px',
-                marginBottom: '1rem',
-                fontSize: '13px',
-                color: theme === 'dark' ? '#fca5a5' : '#dc2626',
+                padding: '10px 14px',
+                fontSize: '12.5px',
+                color: colors.danger,
+                fontWeight: '500',
               }}
             >
               {error}
             </div>
           )}
 
-          {/* Login Button */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading || !email || !password}
             style={{
               width: '100%',
               padding: '12px',
-              borderRadius: '8px',
+              borderRadius: '10px',
               border: 'none',
               background: `linear-gradient(135deg, ${colors.accentFrom}, ${colors.accentTo})`,
-              color: 'white',
+              color: '#ffffff',
               fontWeight: '600',
               fontSize: '14px',
               cursor: loading || !email || !password ? 'not-allowed' : 'pointer',
-              transition: 'all 0.3s ease',
+              transition: 'all 0.2s ease',
               opacity: loading || !email || !password ? 0.6 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (!loading && email && password) {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.2)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = 'none';
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: `0 4px 14px ${colors.accentLight}`,
+              marginTop: '4px',
             }}
           >
             {loading ? (
-              <span
-                style={{
-                  display: 'inline-block',
-                  animation: 'spin 1s linear infinite',
-                }}
-              >
-                ⏳
-              </span>
+              <Loader2 size={18} className="animate-spin" />
             ) : (
-              'Login'
+              <>
+                <span>Sign in to Workspace</span>
+                <ArrowRight size={16} />
+              </>
             )}
           </button>
         </form>
 
-        {/* Demo Info */}
-        {/* <div
-          style={{
-            backgroundColor: colors.bgSecondary,
-            border: `0.5px solid ${colors.border}`,
-            borderRadius: '8px',
-            padding: '12px',
-            fontSize: '12px',
-            color: colors.textSecondary,
-            lineHeight: '1.6',
-          }}
-        >
-          <strong style={{ color: colors.text }}>Demo Credentials:</strong>
-          <div style={{ marginTop: '6px' }}>
-            Email: <code style={{ color: colors.accentFrom }}>{data.email}</code>
-          </div>
-          <div style={{ marginTop: '4px' }}>
-            Password: <code style={{ color: colors.accentFrom }}>{data.password}</code>
-          </div>
-        </div> */}
+        {/* Footer info */}
+        <div style={{ marginTop: '24px', textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: '11.5px', color: colors.textTertiary }}>
+            LinkCollect • Secured with local session authentication
+          </p>
+        </div>
       </div>
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
