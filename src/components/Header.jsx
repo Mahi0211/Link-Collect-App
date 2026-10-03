@@ -40,7 +40,6 @@ export const Header = ({
 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   // Responsive mobile detector
   const [isMobile, setIsMobile] = useState(() => {
@@ -227,27 +226,6 @@ export const Header = ({
 
           {/* Right Action Cluster */}
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '10px', flexShrink: 0 }}>
-            {/* Mobile Search Toggle Button */}
-            {isMobile && (
-              <button
-                onClick={() => setShowMobileSearch(!showMobileSearch)}
-                style={{
-                  background: showMobileSearch ? colors.accentLight : (isDark ? '#141418' : '#f1f5f9'),
-                  border: `1px solid ${showMobileSearch ? colors.accent : colors.border}`,
-                  color: showMobileSearch ? colors.accent : colors.text,
-                  padding: '7px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                title="Search"
-              >
-                <Search size={16} />
-              </button>
-            )}
-
             {/* Desktop View Mode Switcher */}
             {!isMobile && (
               <div
