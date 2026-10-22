@@ -1,4 +1,8 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5070/api';
+const API_BASE = import.meta.env.VITE_API_URL || (
+  typeof window !== 'undefined' && window.location.port === '5173'
+    ? 'http://localhost:5070/api'
+    : '/api'
+);
 
 class ApiClient {
   getToken() {

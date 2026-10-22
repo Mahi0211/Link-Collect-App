@@ -254,7 +254,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   // Aggregate all links with ratings, watched state, and reviews
   const allLinks = useMemo(() => {
     if (dbLinks && dbLinks.length > 0) {
-      return dbLinks.map((l) => ({
+      return dbLinks.map((l, index) => ({
         id: l.id,
         link: l.url,
         url: l.url,
@@ -272,11 +272,16 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         watched: Boolean(l.watched || (l.watchCount && l.watchCount > 0)),
         watchCount: l.watchCount || 0,
         rewatchWorthy: Boolean(l.rewatchWorthy),
+        createdAt: l.createdAt,
+        updatedAt: l.updatedAt,
+        _origIndex: index,
       }));
     }
 
+    let origIdx = 0;
     return collections.flatMap((col) =>
       (col.links || []).map((link) => {
+        origIdx++;
         const url = typeof link === 'string' ? link : link.url;
         const meta = linkMetadata[url] || {};
         return {
@@ -295,10 +300,24 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           watched: Boolean(meta.watched || (meta.watchCount && meta.watchCount > 0)),
           watchCount: meta.watchCount || 0,
           rewatchWorthy: Boolean(meta.rewatchWorthy),
+          createdAt: meta.createdAt || null,
+          _origIndex: origIdx,
         };
       })
     );
   }, [dbLinks, collections, linkMetadata, favorites, readLater, archive]);
+
+  // Dynamic link count per collection based on current allLinks
+  const collectionCounts = useMemo(() => {
+    const map = {};
+    allLinks.forEach((item) => {
+      if (!item.isArchived && item.collectionName) {
+        const key = item.collectionName.trim();
+        map[key] = (map[key] || 0) + 1;
+      }
+    });
+    return map;
+  }, [allLinks]);
 
   // Derived counts for sidebar and quick filters
   const topRatedCount = useMemo(() => allLinks.filter((item) => item.rating >= 4 && !item.isArchived).length, [allLinks]);
@@ -661,14 +680,26 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     } else if (sortOption === 'mostViewed') {
       sorted.sort((a, b) => (b.watchCount || 0) - (a.watchCount || 0));
     } else if (sortOption === 'alphabetical') {
-      sorted.sort((a, b) => a.title.localeCompare(b.title));
+      sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
     } else if (sortOption === 'domain') {
-      sorted.sort((a, b) => a.domain.localeCompare(b.domain));
+      sorted.sort((a, b) => (a.domain || '').localeCompare(b.domain || ''));
     } else if (sortOption === 'oldest') {
-      // Keep naturally in order
+      sorted.sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (timeA && timeB && timeA !== timeB) return timeA - timeB;
+        if (a.id && b.id) return a.id - b.id;
+        return (a._origIndex ?? 0) - (b._origIndex ?? 0);
+      });
     } else {
       // Default: newest first
-      sorted.reverse();
+      sorted.sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (timeA && timeB && timeA !== timeB) return timeB - timeA;
+        if (a.id && b.id) return b.id - a.id;
+        return (b._origIndex ?? 0) - (a._origIndex ?? 0);
+      });
     }
 
     return sorted;
@@ -739,13 +770,15 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     }
     if (activeView === 'collection') {
       const col = collections[activeCollectionId];
+      const nameKey = (col?.collectionName || '').trim();
+      const count = collectionCounts[nameKey] ?? col?.totalLinks ?? (col?.links?.length || 0);
       return {
         title: col?.collectionName || 'Collection',
-        subtitle: `${col?.links?.length || 0} links saved in this collection`,
+        subtitle: `${count} links saved in this collection`,
       };
     }
     return { title: 'Bookmarks', subtitle: '' };
-  }, [activeView, activeCollectionId, collections, searchQuery, selectedTag, displayedLinks.length, allLinks.length, favorites.length, readLater.length, archive.length]);
+  }, [activeView, activeCollectionId, collections, collectionCounts, searchQuery, selectedTag, displayedLinks.length, allLinks.length, favorites.length, readLater.length, archive.length]);
 
   return (
     <div
@@ -782,6 +815,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         rewatchCount={rewatchCount}
         watchedCount={watchedCount}
         totalLinkCount={allLinks.length}
+        collectionCounts={collectionCounts}
         selectedTag={selectedTag}
         onSelectTag={setSelectedTag}
         allTags={allTags}

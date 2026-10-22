@@ -39,6 +39,7 @@ export const Sidebar = ({
   isOpen,
   onToggleSidebar,
   onOpenAddCollection,
+  collectionCounts = {},
   user
 }) => {
   const colors = themes[theme] || themes.dark;
@@ -336,6 +337,8 @@ export const Sidebar = ({
 
             {collections.map((collection, idx) => {
               const isSelected = activeView === 'collection' && activeCollectionId === idx;
+              const nameKey = (collection.collectionName || '').trim();
+              const count = collectionCounts[nameKey] ?? collection.totalLinks ?? (collection.links?.length || 0);
               return (
                 <button
                   key={idx}
@@ -410,7 +413,7 @@ export const Sidebar = ({
                       flexShrink: 0,
                     }}
                   >
-                    {collection.links?.length || 0}
+                    {count}
                   </span>
                 </button>
               );

@@ -94,10 +94,10 @@ public class LinkService : ILinkService
         // Sorting
         query = (sort?.ToLowerInvariant()) switch
         {
-            "oldest" => query.OrderBy(l => l.CreatedAt),
-            "alphabetical" => query.OrderBy(l => l.Title),
-            "domain" => query.OrderBy(l => l.Domain),
-            _ => query.OrderByDescending(l => l.CreatedAt)
+            "oldest" => query.OrderBy(l => l.CreatedAt).ThenBy(l => l.Id),
+            "alphabetical" => query.OrderBy(l => l.Title).ThenByDescending(l => l.Id),
+            "domain" => query.OrderBy(l => l.Domain).ThenByDescending(l => l.Id),
+            _ => query.OrderByDescending(l => l.CreatedAt).ThenByDescending(l => l.Id)
         };
 
         var items = await query.ToListAsync(cancellationToken);
