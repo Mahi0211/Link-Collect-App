@@ -337,8 +337,11 @@ export const Sidebar = ({
 
             {collections.map((collection, idx) => {
               const isSelected = activeView === 'collection' && activeCollectionId === idx;
-              const nameKey = (collection.collectionName || '').trim();
-              const count = collectionCounts[nameKey] ?? collection.totalLinks ?? (collection.links?.length || 0);
+              const nameKey = (collection.collectionName || '').trim().toLowerCase();
+              const count = (collection.id ? collectionCounts[`id_${collection.id}`] : undefined)
+                ?? collectionCounts[nameKey]
+                ?? collection.totalLinks
+                ?? (collection.links?.length || 0);
               return (
                 <button
                   key={idx}

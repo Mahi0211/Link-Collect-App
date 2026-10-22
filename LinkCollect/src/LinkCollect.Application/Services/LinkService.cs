@@ -54,6 +54,7 @@ public class LinkService : ILinkService
                     query = query.Where(l => l.Rating >= 4 && !l.IsArchived);
                     break;
                 case "rewatch":
+                case "rewatchworthy":
                     query = query.Where(l => l.RewatchWorthy && !l.IsArchived);
                     break;
                 case "watched":

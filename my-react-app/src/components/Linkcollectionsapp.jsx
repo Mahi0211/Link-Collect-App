@@ -311,9 +311,14 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   const collectionCounts = useMemo(() => {
     const map = {};
     allLinks.forEach((item) => {
-      if (!item.isArchived && item.collectionName) {
-        const key = item.collectionName.trim();
-        map[key] = (map[key] || 0) + 1;
+      if (!item.isArchived) {
+        if (item.collectionId) {
+          map[`id_${item.collectionId}`] = (map[`id_${item.collectionId}`] || 0) + 1;
+        }
+        if (item.collectionName) {
+          const key = item.collectionName.trim().toLowerCase();
+          map[key] = (map[key] || 0) + 1;
+        }
       }
     });
     return map;
@@ -334,17 +339,19 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   }, [allLinks]);
 
   // Direct card rating handler
-  const handleRate = (url, newRating) => {
+  const handleRate = async (url, newRating) => {
     const targetItem = allLinks.find((l) => l.url === url);
     if (targetItem?.id) {
-      api.rateLink(targetItem.id, newRating).catch((err) => console.warn(err));
-      setDbLinks((prev) =>
-        (prev || []).map((l) =>
-          l.id === targetItem.id
-            ? { ...l, rating: newRating, rewatchWorthy: newRating >= 4 ? true : l.rewatchWorthy }
-            : l
-        )
-      );
+      try {
+        const updated = await api.rateLink(targetItem.id, newRating);
+        if (updated) {
+          setDbLinks((prev) =>
+            (prev || []).map((l) => (l.id === targetItem.id ? updated : l))
+          );
+        }
+      } catch (err) {
+        console.warn('API rate notice:', err);
+      }
     }
 
     setLinkMetadata((prev) => {
@@ -367,20 +374,19 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   };
 
   // Direct card watched toggle handler
-  const handleToggleWatched = (url) => {
+  const handleToggleWatched = async (url) => {
     const targetItem = allLinks.find((l) => l.url === url);
     if (targetItem?.id) {
-      api.toggleWatched(targetItem.id).catch((err) => console.warn(err));
-      setDbLinks((prev) =>
-        (prev || []).map((l) => {
-          if (l.id === targetItem.id) {
-            const nextWatched = !l.watched;
-            const nextCount = nextWatched && (!l.watchCount || l.watchCount === 0) ? 1 : (l.watchCount || 0);
-            return { ...l, watched: nextWatched, watchCount: nextCount };
-          }
-          return l;
-        })
-      );
+      try {
+        const updated = await api.toggleWatched(targetItem.id);
+        if (updated) {
+          setDbLinks((prev) =>
+            (prev || []).map((l) => (l.id === targetItem.id ? updated : l))
+          );
+        }
+      } catch (err) {
+        console.warn('API toggle watched notice:', err);
+      }
     }
 
     setLinkMetadata((prev) => {
@@ -648,7 +654,12 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     } else if (activeView === 'collection') {
       const activeCol = collections[activeCollectionId];
       if (activeCol) {
-        list = allLinks.filter((item) => item.collectionName === activeCol.collectionName && !item.isArchived);
+        list = allLinks.filter((item) => {
+          if (item.isArchived) return false;
+          if (activeCol.id && item.collectionId && item.collectionId === activeCol.id) return true;
+          return item.collectionName && activeCol.collectionName &&
+            item.collectionName.trim().toLowerCase() === activeCol.collectionName.trim().toLowerCase();
+        });
       }
     }
 
@@ -770,8 +781,11 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     }
     if (activeView === 'collection') {
       const col = collections[activeCollectionId];
-      const nameKey = (col?.collectionName || '').trim();
-      const count = collectionCounts[nameKey] ?? col?.totalLinks ?? (col?.links?.length || 0);
+      const nameKey = (col?.collectionName || '').trim().toLowerCase();
+      const count = (col?.id ? collectionCounts[`id_${col.id}`] : undefined)
+        ?? collectionCounts[nameKey]
+        ?? col?.totalLinks
+        ?? (col?.links?.length || 0);
       return {
         title: col?.collectionName || 'Collection',
         subtitle: `${count} links saved in this collection`,
