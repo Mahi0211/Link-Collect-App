@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: linkcollect-app
+    runtime: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        sync: false
+      - key: Jwt__SecretKey
+        generateValue: true
+      - key: Jwt__Issuer
+        value: LinkCollectApi
+      - key: Jwt__Audience
+        value: LinkCollectFrontend

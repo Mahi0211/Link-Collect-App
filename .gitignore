@@ -1,0 +1,25 @@
+# Build results
+**/[Bb]in/
+**/[Oo]bj/
+**/dist/
+**/build/
+
+# Node
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment & Credentials
+.env
+.env.*
+!.env.example
+
+# IDE & OS
+.vs/
+.vscode/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+*.log

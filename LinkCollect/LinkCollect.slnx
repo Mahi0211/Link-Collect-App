@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LinkCollect.Api/LinkCollect.Api.csproj" />
+    <Project Path="src/LinkCollect.Application/LinkCollect.Application.csproj" />
+    <Project Path="src/LinkCollect.Domain/LinkCollect.Domain.csproj" />
+    <Project Path="src/LinkCollect.Infrastructure/LinkCollect.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LinkCollect.IntegrationTests/LinkCollect.IntegrationTests.csproj" />
+    <Project Path="tests/LinkCollect.UnitTests/LinkCollect.UnitTests.csproj" />
+  </Folder>
+</Solution>
