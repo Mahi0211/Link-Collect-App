@@ -25,4 +25,9 @@ public interface ILinkService
     Task<LinkDto> RateLinkAsync(int userId, int linkId, int rating, CancellationToken cancellationToken = default);
 
     Task<int> SeedUserDataAsync(int userId, SeedUserImportDto seedData, CancellationToken cancellationToken = default);
+
+    Task<DuplicateCheckDto> CheckDuplicateAsync(int userId, string url, CancellationToken cancellationToken = default);
+    Task<BulkActionResultDto> ExecuteBulkActionAsync(int userId, BulkLinkActionDto request, CancellationToken cancellationToken = default);
+    Task<int> ImportBatchLinksAsync(int userId, List<CreateLinkDto> links, CancellationToken cancellationToken = default);
+    Task<PublicCollectionDto> GetPublicCollectionAsync(int collectionId, CancellationToken cancellationToken = default);
 }

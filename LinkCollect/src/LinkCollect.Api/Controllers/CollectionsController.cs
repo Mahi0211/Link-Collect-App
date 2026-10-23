@@ -9,10 +9,12 @@ namespace LinkCollect.Api.Controllers;
 public class CollectionsController : BaseApiController
 {
     private readonly ICollectionService _collectionService;
+    private readonly ILinkService _linkService;
 
-    public CollectionsController(ICollectionService collectionService)
+    public CollectionsController(ICollectionService collectionService, ILinkService linkService)
     {
         _collectionService = collectionService;
+        _linkService = linkService;
     }
 
     [HttpGet]
@@ -45,5 +47,13 @@ public class CollectionsController : BaseApiController
         var userId = GetUserId();
         await _collectionService.DeleteCollectionAsync(userId, id, cancellationToken);
         return NoContent();
+    }
+
+    [AllowAnonymous]
+    [HttpGet("public/{id:int}")]
+    public async Task<ActionResult<LinkCollect.Application.DTOs.Links.PublicCollectionDto>> GetPublicCollection(int id, CancellationToken cancellationToken)
+    {
+        var collection = await _linkService.GetPublicCollectionAsync(id, cancellationToken);
+        return Ok(collection);
     }
 }

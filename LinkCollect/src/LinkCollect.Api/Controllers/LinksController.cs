@@ -9,10 +9,12 @@ namespace LinkCollect.Api.Controllers;
 public class LinksController : BaseApiController
 {
     private readonly ILinkService _linkService;
+    private readonly IMetadataService _metadataService;
 
-    public LinksController(ILinkService linkService)
+    public LinksController(ILinkService linkService, IMetadataService metadataService)
     {
         _linkService = linkService;
+        _metadataService = metadataService;
     }
 
     [HttpGet]
@@ -108,4 +110,52 @@ public class LinksController : BaseApiController
         var count = await _linkService.SeedUserDataAsync(userId, seedData, cancellationToken);
         return Ok(new { message = $"Successfully imported {count} links.", count });
     }
+
+    [HttpGet("scrape")]
+    public async Task<ActionResult<UrlMetadataDto>> ScrapeUrlMetadata([FromQuery] string url, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return BadRequest("URL parameter is required.");
+        }
+        var metadata = await _metadataService.ScrapeMetadataAsync(url, cancellationToken);
+        return Ok(metadata);
+    }
+
+    [HttpGet("check-duplicate")]
+    public async Task<ActionResult<DuplicateCheckDto>> CheckDuplicate([FromQuery] string url, CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        var result = await _linkService.CheckDuplicateAsync(userId, url, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("check-status")]
+    public async Task<ActionResult<LinkStatusDto>> CheckStatus([FromBody] CheckStatusRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _metadataService.CheckLinkStatusAsync(request.Url, request.LinkId, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("bulk")]
+    public async Task<ActionResult<BulkActionResultDto>> ExecuteBulkAction([FromBody] BulkLinkActionDto request, CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        var result = await _linkService.ExecuteBulkActionAsync(userId, request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("batch-import")]
+    public async Task<ActionResult<object>> BatchImport([FromBody] List<CreateLinkDto> links, CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        var count = await _linkService.ImportBatchLinksAsync(userId, links, cancellationToken);
+        return Ok(new { message = $"Successfully imported {count} links.", count });
+    }
+}
+
+public class CheckStatusRequest
+{
+    public int LinkId { get; set; }
+    public string Url { get; set; } = string.Empty;
 }

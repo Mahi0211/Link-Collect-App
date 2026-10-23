@@ -11,6 +11,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<ILinkService, LinkService>();
+        services.AddSingleton<IMetadataService, MetadataService>();
 
         return services;
     }

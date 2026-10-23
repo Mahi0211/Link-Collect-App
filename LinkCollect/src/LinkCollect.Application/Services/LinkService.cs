@@ -410,6 +410,255 @@ public class LinkService : ILinkService
         return addedCount;
     }
 
+    public async Task<DuplicateCheckDto> CheckDuplicateAsync(int userId, string rawUrl, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(rawUrl))
+        {
+            return new DuplicateCheckDto { Exists = false };
+        }
+
+        var normalized = rawUrl.Trim().TrimEnd('/');
+        var altSlash = normalized + "/";
+
+        var existing = await _context.Links
+            .Include(l => l.Collection)
+            .Include(l => l.LinkTags).ThenInclude(lt => lt.Tag)
+            .FirstOrDefaultAsync(l => l.UserId == userId && (l.Url == normalized || l.Url == altSlash), cancellationToken);
+
+        if (existing == null)
+        {
+            return new DuplicateCheckDto { Exists = false };
+        }
+
+        return new DuplicateCheckDto
+        {
+            Exists = true,
+            Link = MapToDto(existing),
+            CollectionName = existing.Collection?.Name
+        };
+    }
+
+    public async Task<BulkActionResultDto> ExecuteBulkActionAsync(int userId, BulkLinkActionDto request, CancellationToken cancellationToken = default)
+    {
+        if (request.LinkIds == null || request.LinkIds.Count == 0)
+        {
+            return new BulkActionResultDto { SuccessCount = 0, FailedCount = 0, Message = "No links provided." };
+        }
+
+        var links = await _context.Links
+            .Include(l => l.LinkTags)
+            .Where(l => l.UserId == userId && request.LinkIds.Contains(l.Id))
+            .ToListAsync(cancellationToken);
+
+        int count = 0;
+        var action = request.Action?.Trim().ToLowerInvariant() ?? "";
+
+        switch (action)
+        {
+            case "delete":
+                _context.Links.RemoveRange(links);
+                count = links.Count;
+                break;
+
+            case "move":
+                foreach (var link in links)
+                {
+                    link.CollectionId = request.TargetCollectionId > 0 ? request.TargetCollectionId : null;
+                    link.UpdatedAt = DateTime.UtcNow;
+                    count++;
+                }
+                break;
+
+            case "favorite":
+                foreach (var link in links)
+                {
+                    link.IsFavorite = true;
+                    link.UpdatedAt = DateTime.UtcNow;
+                    count++;
+                }
+                break;
+
+            case "unfavorite":
+                foreach (var link in links)
+                {
+                    link.IsFavorite = false;
+                    link.UpdatedAt = DateTime.UtcNow;
+                    count++;
+                }
+                break;
+
+            case "readlater":
+                foreach (var link in links)
+                {
+                    link.IsReadLater = true;
+                    link.UpdatedAt = DateTime.UtcNow;
+                    count++;
+                }
+                break;
+
+            case "unreadlater":
+                foreach (var link in links)
+                {
+                    link.IsReadLater = false;
+                    link.UpdatedAt = DateTime.UtcNow;
+                    count++;
+                }
+                break;
+
+            case "archive":
+                foreach (var link in links)
+                {
+                    link.IsArchived = true;
+                    link.UpdatedAt = DateTime.UtcNow;
+                    count++;
+                }
+                break;
+
+            case "unarchive":
+                foreach (var link in links)
+                {
+                    link.IsArchived = false;
+                    link.UpdatedAt = DateTime.UtcNow;
+                    count++;
+                }
+                break;
+
+            case "addtag":
+                if (!string.IsNullOrWhiteSpace(request.Tag))
+                {
+                    var tagName = request.Tag.Trim();
+                    var tag = await _context.Tags
+                        .FirstOrDefaultAsync(t => t.UserId == userId && t.Name.ToLower() == tagName.ToLower(), cancellationToken);
+
+                    if (tag == null)
+                    {
+                        tag = new Tag { UserId = userId, Name = tagName };
+                        _context.Tags.Add(tag);
+                        await _context.SaveChangesAsync(cancellationToken);
+                    }
+
+                    foreach (var link in links)
+                    {
+                        if (!link.LinkTags.Any(lt => lt.TagId == tag.Id))
+                        {
+                            link.LinkTags.Add(new LinkTag { LinkItemId = link.Id, TagId = tag.Id });
+                            link.UpdatedAt = DateTime.UtcNow;
+                            count++;
+                        }
+                    }
+                }
+                break;
+
+            default:
+                return new BulkActionResultDto { SuccessCount = 0, FailedCount = links.Count, Message = $"Unknown action '{request.Action}'." };
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return new BulkActionResultDto
+        {
+            SuccessCount = count,
+            FailedCount = request.LinkIds.Count - count,
+            Message = $"Successfully applied '{request.Action}' to {count} link(s)."
+        };
+    }
+
+    public async Task<int> ImportBatchLinksAsync(int userId, List<CreateLinkDto> items, CancellationToken cancellationToken = default)
+    {
+        if (items == null || items.Count == 0) return 0;
+
+        int added = 0;
+        var now = DateTime.UtcNow;
+
+        foreach (var item in items)
+        {
+            if (string.IsNullOrWhiteSpace(item.Url)) continue;
+
+            int? colId = item.CollectionId;
+            if ((!colId.HasValue || colId.Value <= 0) && !string.IsNullOrWhiteSpace(item.CollectionName))
+            {
+                var colName = item.CollectionName.Trim();
+                var col = await _context.Collections
+                    .FirstOrDefaultAsync(c => c.UserId == userId && c.Name.ToLower() == colName.ToLower(), cancellationToken);
+
+                if (col == null)
+                {
+                    col = new Collection { UserId = userId, Name = colName, CreatedAt = now, UpdatedAt = now };
+                    _context.Collections.Add(col);
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                colId = col.Id;
+            }
+
+            var domain = ExtractDomain(item.Url);
+            var title = !string.IsNullOrWhiteSpace(item.Title) ? item.Title : GetFallbackTitle(item.Url, domain);
+
+            var link = new LinkItem
+            {
+                UserId = userId,
+                CollectionId = colId,
+                Url = item.Url.Trim(),
+                Title = title,
+                Domain = domain,
+                Notes = item.Notes ?? string.Empty,
+                IsFavorite = item.IsFavorite,
+                IsReadLater = item.IsReadLater,
+                IsArchived = item.IsArchived,
+                Rating = item.Rating,
+                Review = item.Review ?? string.Empty,
+                Watched = item.Watched,
+                WatchCount = item.WatchCount,
+                RewatchWorthy = item.RewatchWorthy,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            _context.Links.Add(link);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            if (item.CustomTags != null && item.CustomTags.Count > 0)
+            {
+                await AttachTagsAsync(userId, link, item.CustomTags, cancellationToken);
+            }
+
+            added++;
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return added;
+    }
+
+    public async Task<PublicCollectionDto> GetPublicCollectionAsync(int collectionId, CancellationToken cancellationToken = default)
+    {
+        var col = await _context.Collections
+            .Include(c => c.User)
+            .Include(c => c.Links)
+                .ThenInclude(l => l.LinkTags)
+                    .ThenInclude(lt => lt.Tag)
+            .FirstOrDefaultAsync(c => c.Id == collectionId, cancellationToken);
+
+        if (col == null)
+        {
+            throw new NotFoundException("Collection not found or not available.");
+        }
+
+        var publicLinks = col.Links
+            .Where(l => !l.IsArchived)
+            .OrderByDescending(l => l.CreatedAt)
+            .Select(MapToDto)
+            .ToList();
+
+        return new PublicCollectionDto
+        {
+            Id = col.Id,
+            Name = col.Name,
+            AuthorName = col.User?.Name ?? col.User?.Username ?? "LinkCollect Curator",
+            CreatedAt = col.CreatedAt,
+            LinksCount = publicLinks.Count,
+            Links = publicLinks
+        };
+    }
+
     private async Task AttachTagsAsync(int userId, LinkItem linkItem, IEnumerable<string> tagNames, CancellationToken cancellationToken)
     {
         foreach (var rawTag in tagNames)
