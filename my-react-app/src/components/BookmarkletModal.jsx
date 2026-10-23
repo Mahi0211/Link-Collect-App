@@ -1,13 +1,21 @@
-import React, { useState } from 'react';
-import { X, BookmarkPlus, Copy, Check, ExternalLink, HelpCircle, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, BookmarkPlus, Copy, Check, Sparkles, HelpCircle } from 'lucide-react';
 
 export function BookmarkletModal({ isOpen, onClose }) {
   const [copied, setCopied] = useState(false);
+  const bookmarkLinkRef = useRef(null);
 
   if (!isOpen) return null;
 
-  const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+  const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5070';
   const bookmarkletCode = `javascript:(function(){var url=encodeURIComponent(window.location.href);var title=encodeURIComponent(document.title);window.open('${appOrigin}/?addUrl='+url+'&addTitle='+title,'LinkCollect','width=640,height=720,toolbar=no,menubar=no');})();`;
+
+  // Bypass React's JSX javascript: URL sanitizer by setting attribute directly on the DOM element
+  useEffect(() => {
+    if (bookmarkLinkRef.current) {
+      bookmarkLinkRef.current.setAttribute('href', bookmarkletCode);
+    }
+  }, [bookmarkletCode]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(bookmarkletCode);
@@ -38,54 +46,59 @@ export function BookmarkletModal({ isOpen, onClose }) {
           Save any webpage to LinkCollect in one click while browsing without having to switch tabs or open the app manually!
         </p>
 
-        {/* Drag to Bookmarks Bar */}
+        {/* Method 1: Drag to Bookmarks Bar */}
         <div className="p-5 bg-slate-950/60 rounded-2xl border border-slate-800 text-center space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Drag this button to your Browser's Bookmarks Bar:
+            Method 1: Drag this button to your Bookmarks Bar
           </p>
           <div className="py-2">
             <a
-              href={bookmarkletCode}
+              ref={bookmarkLinkRef}
               onClick={(e) => {
                 e.preventDefault();
-                alert('Drag this button to your Bookmarks Bar (Ctrl+Shift+B / Cmd+Shift+B) to install!');
+                alert('Drag this button to your Bookmarks Bar (Ctrl+Shift+B or Cmd+Shift+B) to install!');
               }}
               draggable="true"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-500/25 cursor-grab active:cursor-grabbing transform hover:-translate-y-0.5 transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-500/25 cursor-grab active:cursor-grabbing transform hover:-translate-y-0.5 transition-all select-none"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
               + Save to LinkCollect
             </a>
           </div>
           <p className="text-[11px] text-slate-400">
-            (Press <kbd className="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">Ctrl+Shift+B</kbd> or <kbd className="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">Cmd+Shift+B</kbd> if your bookmarks bar is hidden)
+            (Make sure your Bookmarks Bar is visible: press <kbd className="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-slate-200">Ctrl+Shift+B</kbd> or <kbd className="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-slate-200">Cmd+Shift+B</kbd>)
           </p>
         </div>
 
-        {/* Or Copy JS Code */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Or copy bookmarklet code manually:</span>
+        {/* Method 2: Manual 10-Second Setup */}
+        <div className="p-4 bg-slate-800/40 rounded-2xl border border-slate-700/60 space-y-2.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+              <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
+              Method 2: Add manually (if drag is blocked)
+            </span>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300 font-medium"
+              className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'Copied to Clipboard' : 'Copy Code'}
+              {copied ? 'Code Copied!' : 'Copy Code'}
             </button>
           </div>
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs font-mono text-slate-400 truncate select-all">
-            {bookmarkletCode}
-          </div>
+          <ol className="text-xs text-slate-400 list-decimal list-inside space-y-1">
+            <li>Right-click your browser's bookmarks bar and select <strong className="text-slate-200">"Add page..."</strong> or <strong className="text-slate-200">"Add bookmark"</strong>.</li>
+            <li>Set Name to: <strong className="text-slate-200">+ Save to LinkCollect</strong></li>
+            <li>Paste the copied code into the <strong className="text-slate-200">URL</strong> field and click Save!</li>
+          </ol>
         </div>
 
         {/* Footer */}
-        <div className="pt-2 flex justify-end">
+        <div className="pt-1 flex justify-end">
           <button
             onClick={onClose}
             className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition-colors"
           >
-            Got It
+            Close
           </button>
         </div>
       </div>
