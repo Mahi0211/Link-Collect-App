@@ -5,23 +5,24 @@ export function BookmarkletModal({ isOpen, onClose }) {
   const [copied, setCopied] = useState(false);
   const bookmarkLinkRef = useRef(null);
 
-  if (!isOpen) return null;
-
   const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5070';
   const bookmarkletCode = `javascript:(function(){var url=encodeURIComponent(window.location.href);var title=encodeURIComponent(document.title);window.open('${appOrigin}/?addUrl='+url+'&addTitle='+title,'LinkCollect','width=640,height=720,toolbar=no,menubar=no');})();`;
 
-  // Bypass React's JSX javascript: URL sanitizer by setting attribute directly on the DOM element
+  // Always declare all hooks at the top level before any conditional returns
   useEffect(() => {
-    if (bookmarkLinkRef.current) {
+    if (isOpen && bookmarkLinkRef.current) {
       bookmarkLinkRef.current.setAttribute('href', bookmarkletCode);
     }
-  }, [bookmarkletCode]);
+  }, [isOpen, bookmarkletCode]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(bookmarkletCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Conditional return must always be after all hooks
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
