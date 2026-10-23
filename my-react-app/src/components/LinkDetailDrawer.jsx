@@ -21,11 +21,17 @@ import {
   Unlock,
   Plus,
   Minus,
-  RotateCcw
+  RotateCcw,
+  QrCode,
+  Activity,
+  FileText,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 import { getFaviconUrl, getDomainName, getLinkPreviewData } from '../utils/linkUtils';
 import { StarRating } from './StarRating';
+import { api } from '../utils/api';
 
 export const LinkDetailDrawer = ({
   item,
@@ -35,7 +41,8 @@ export const LinkDetailDrawer = ({
   onUpdateItem,
   onDeleteItem,
   theme = 'dark',
-  onShowToast
+  onShowToast,
+  onShowQr
 }) => {
   if (!isOpen || !item) return null;
 
@@ -58,6 +65,43 @@ export const LinkDetailDrawer = ({
   const [watched, setWatched] = useState(item.watched || false);
   const [watchCount, setWatchCount] = useState(item.watchCount || (item.watched ? 1 : 0));
   const [rewatchWorthy, setRewatchWorthy] = useState(item.rewatchWorthy || false);
+
+  // Health check & Markdown preview states
+  const [healthStatus, setHealthStatus] = useState(null);
+  const [isCheckingHealth, setIsCheckingHealth] = useState(false);
+  const [isMarkdownPreview, setIsMarkdownPreview] = useState(false);
+
+  const checkHealth = async () => {
+    if (!url) return;
+    setIsCheckingHealth(true);
+    try {
+      const res = await api.checkLinkStatus(url, item.id || 0);
+      setHealthStatus(res);
+      if (onShowToast) onShowToast(res.isAlive ? `Link is Active (${res.statusCode})` : `Link returned ${res.statusText}`);
+    } catch {
+      setHealthStatus({ isAlive: false, statusText: 'Check Failed' });
+    } finally {
+      setIsCheckingHealth(false);
+    }
+  };
+
+  const renderSimpleMarkdown = (text) => {
+    if (!text) return <span style={{ color: colors.textTertiary, fontStyle: 'italic' }}>No notes provided.</span>;
+    const lines = text.split('\n');
+    return lines.map((line, idx) => {
+      if (line.startsWith('# ')) return <h4 key={idx} style={{ fontSize: '14px', fontWeight: 'bold', margin: '4px 0', color: colors.text }}>{line.slice(2)}</h4>;
+      if (line.startsWith('## ')) return <h5 key={idx} style={{ fontSize: '13px', fontWeight: 'bold', margin: '3px 0', color: colors.text }}>{line.slice(3)}</h5>;
+      if (line.startsWith('- ') || line.startsWith('* ')) {
+        return (
+          <div key={idx} style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', margin: '2px 0' }}>
+            <span style={{ color: colors.accent, fontWeight: 'bold' }}>•</span>
+            <span>{line.slice(2)}</span>
+          </div>
+        );
+      }
+      return <p key={idx} style={{ margin: '2px 0', minHeight: '18px' }}>{line || '\u00A0'}</p>;
+    });
+  };
 
   useEffect(() => {
     if (item) {
@@ -428,6 +472,52 @@ export const LinkDetailDrawer = ({
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
               </button>
+              {onShowQr && (
+                <button
+                  type="button"
+                  onClick={() => onShowQr({ ...item, url, title })}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.border}`,
+                    backgroundColor: isDark ? colors.bgTertiary : '#ffffff',
+                    color: colors.text,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '12px',
+                  }}
+                  title="Scan Mobile QR Code"
+                >
+                  <QrCode size={14} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={checkHealth}
+                disabled={isCheckingHealth}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: isDark ? colors.bgTertiary : '#ffffff',
+                  color: healthStatus ? (healthStatus.isAlive ? '#10b981' : '#ef4444') : colors.textSecondary,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '12px',
+                }}
+                title="Test if link is active or broken (404)"
+              >
+                {isCheckingHealth ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Activity size={14} />
+                )}
+                <span>{healthStatus ? (healthStatus.isAlive ? `${healthStatus.statusCode} OK` : healthStatus.statusText) : 'Ping'}</span>
+              </button>
               <a
                 href={url}
                 target="_blank"
@@ -796,29 +886,68 @@ export const LinkDetailDrawer = ({
             </div>
           </div>
 
-          {/* Personal Notes Field */}
+          {/* Personal Notes Field with Markdown Toggle */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: colors.textSecondary, marginBottom: '6px' }}>
-              Quick Notes & Highlights
-            </label>
-            <textarea
-              placeholder="Add personal reminders, timestamps, or quotes..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: '8px',
-                backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
-                border: `1px solid ${colors.border}`,
-                color: colors.text,
-                fontSize: '13px',
-                outline: 'none',
-                resize: 'vertical',
-                lineHeight: '1.5',
-              }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '600', color: colors.textSecondary }}>
+                Quick Notes & Highlights (Markdown Supported)
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsMarkdownPreview(!isMarkdownPreview)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: isMarkdownPreview ? colors.accent : colors.textTertiary,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Eye size={12} />
+                <span>{isMarkdownPreview ? 'Edit Raw' : 'Preview Markdown'}</span>
+              </button>
+            </div>
+
+            {isMarkdownPreview ? (
+              <div
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                  border: `1px solid ${colors.border}`,
+                  color: colors.text,
+                  fontSize: '13px',
+                  minHeight: '80px',
+                  lineHeight: '1.6',
+                }}
+              >
+                {renderSimpleMarkdown(notes)}
+              </div>
+            ) : (
+              <textarea
+                placeholder="Add personal reminders, timestamps, or quotes (supports # headings, - lists)..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                  border: `1px solid ${colors.border}`,
+                  color: colors.text,
+                  fontSize: '13px',
+                  outline: 'none',
+                  resize: 'vertical',
+                  lineHeight: '1.5',
+                }}
+              />
+            )}
           </div>
         </div>
 

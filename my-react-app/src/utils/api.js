@@ -181,6 +181,40 @@ class ApiClient {
       body: JSON.stringify(seedData),
     });
   }
+
+  // Extended Features Endpoints
+  async scrapeMetadata(url) {
+    return await this.request(`/links/scrape?url=${encodeURIComponent(url)}`);
+  }
+
+  async checkDuplicate(url) {
+    return await this.request(`/links/check-duplicate?url=${encodeURIComponent(url)}`);
+  }
+
+  async checkLinkStatus(url, linkId = 0) {
+    return await this.request('/links/check-status', {
+      method: 'POST',
+      body: JSON.stringify({ url, linkId }),
+    });
+  }
+
+  async executeBulkAction(data) {
+    return await this.request('/links/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async batchImportLinks(links) {
+    return await this.request('/links/batch-import', {
+      method: 'POST',
+      body: JSON.stringify(links),
+    });
+  }
+
+  async getPublicCollection(collectionId) {
+    return await this.request(`/collections/public/${collectionId}`);
+  }
 }
 
 export const api = new ApiClient();

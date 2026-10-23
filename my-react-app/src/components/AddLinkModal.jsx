@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Plus,
@@ -10,10 +10,15 @@ import {
   Sparkles,
   Check,
   CheckCircle,
-  Flame
+  Flame,
+  AlertTriangle,
+  Loader2,
+  Globe,
+  FileText
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 import { getDomainName, getPageTitle, getSuggestedTags } from '../utils/linkUtils';
+import { api } from '../utils/api';
 
 export const AddLinkModal = ({
   isOpen,
@@ -22,17 +27,19 @@ export const AddLinkModal = ({
   activeCollectionIndex = 0,
   onAddLink,
   theme = 'dark',
-  onShowToast
+  onShowToast,
+  initialUrl = '',
+  initialTitle = ''
 }) => {
   if (!isOpen) return null;
 
   const colors = themes[theme];
   const isDark = theme === 'dark';
 
-  const defaultCollection = collections[activeCollectionIndex]?.collectionName || 'General';
+  const defaultCollection = collections[activeCollectionIndex]?.collectionName || collections[0]?.name || 'General';
 
-  const [url, setUrl] = useState('');
-  const [title, setTitle] = useState('');
+  const [url, setUrl] = useState(initialUrl);
+  const [title, setTitle] = useState(initialTitle);
   const [selectedCollection, setSelectedCollection] = useState(defaultCollection);
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
@@ -42,16 +49,67 @@ export const AddLinkModal = ({
   const [watched, setWatched] = useState(false);
   const [rewatchWorthy, setRewatchWorthy] = useState(false);
 
-  // When URL changes, automatically predict title and suggest tags
+  // Advanced metadata & duplicate states
+  const [isScraping, setIsScraping] = useState(false);
+  const [metadataPreview, setMetadataPreview] = useState(null);
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const debounceTimerRef = useRef(null);
+
+  // Trigger auto-scrape and duplicate check on URL input
   useEffect(() => {
-    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-      const autoTitle = getPageTitle(url);
-      if (!title || title === 'Saved Link') {
-        setTitle(autoTitle);
-      }
-      const suggested = getSuggestedTags(url);
-      setTags((prev) => Array.from(new Set([...prev, ...suggested])));
+    if (!url || url.trim().length < 5) {
+      setDuplicateWarning(null);
+      setMetadataPreview(null);
+      return;
     }
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+    debounceTimerRef.current = setTimeout(async () => {
+      let finalUrl = url.trim();
+      if (!/^https?:\/\//i.test(finalUrl)) finalUrl = 'https://' + finalUrl;
+
+      // 1. Check Duplicate
+      try {
+        const dupRes = await api.checkDuplicate(finalUrl);
+        if (dupRes && dupRes.exists) {
+          setDuplicateWarning(dupRes);
+        } else {
+          setDuplicateWarning(null);
+        }
+      } catch {
+        // silent fail
+      }
+
+      // 2. Scrape Metadata
+      setIsScraping(true);
+      try {
+        const meta = await api.scrapeMetadata(finalUrl);
+        if (meta) {
+          setMetadataPreview(meta);
+          if (meta.title && (!title || title === 'Saved Link' || title === getPageTitle(finalUrl))) {
+            setTitle(meta.title);
+          }
+          if (meta.description && !notes) {
+            setNotes(meta.description);
+          }
+          const suggested = meta.keywords && meta.keywords.length > 0 ? meta.keywords : getSuggestedTags(finalUrl);
+          setTags((prev) => Array.from(new Set([...prev, ...suggested])));
+        }
+      } catch {
+        // fallback to client-side heuristics
+        const autoTitle = getPageTitle(finalUrl);
+        if (!title || title === 'Saved Link') setTitle(autoTitle);
+        const suggested = getSuggestedTags(finalUrl);
+        setTags((prev) => Array.from(new Set([...prev, ...suggested])));
+      } finally {
+        setIsScraping(false);
+      }
+    }, 450);
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
   }, [url]);
 
   const handleAddTag = (e) => {
@@ -198,7 +256,91 @@ export const AddLinkModal = ({
                   outline: 'none',
                 }}
               />
+              {isScraping && (
+                <div style={{ position: 'absolute', right: '12px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: colors.accent }}>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Fetching...</span>
+                </div>
+              )}
             </div>
+
+            {/* Duplicate Warning Alert */}
+            {duplicateWarning && (
+              <div
+                style={{
+                  marginTop: '8px',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(234, 179, 8, 0.12)',
+                  border: '1px solid rgba(234, 179, 8, 0.3)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                  fontSize: '11.5px',
+                  color: '#eab308'
+                }}
+              >
+                <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <strong>Already Saved!</strong> You already have this link in your library
+                  {duplicateWarning.collectionName ? ` in "${duplicateWarning.collectionName}"` : ''}.
+                </div>
+              </div>
+            )}
+
+            {/* Live OpenGraph Preview Card */}
+            {metadataPreview && (
+              <div
+                style={{
+                  marginTop: '8px',
+                  padding: '10px',
+                  borderRadius: '10px',
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#f1f5f9',
+                  border: `1px solid ${colors.border}`,
+                  display: 'flex',
+                  gap: '10px',
+                  alignItems: 'center'
+                }}
+              >
+                {metadataPreview.image ? (
+                  <img
+                    src={metadataPreview.image}
+                    alt=""
+                    style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }}
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '6px',
+                      backgroundColor: colors.accentLight,
+                      color: colors.accent,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    <Globe size={18} />
+                  </div>
+                )}
+                <div style={{ overflow: 'hidden', flex: 1 }}>
+                  <div style={{ fontSize: '11px', fontWeight: '600', color: colors.accent, textTransform: 'uppercase' }}>
+                    {metadataPreview.domain}
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: colors.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {metadataPreview.title || 'Preview Title'}
+                  </div>
+                  {metadataPreview.description && (
+                    <div style={{ fontSize: '11px', color: colors.textTertiary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {metadataPreview.description}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Title Input */}

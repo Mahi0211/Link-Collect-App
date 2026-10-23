@@ -26,6 +26,12 @@ import { AddLinkModal } from './AddLinkModal';
 import { CommandPalette } from './CommandPalette';
 import { Toast } from './Toast';
 import { Pagination } from './Pagination';
+import { ImportExportModal } from './ImportExportModal';
+import { QrCodeModal } from './QrCodeModal';
+import { SurpriseMeModal } from './SurpriseMeModal';
+import { BookmarkletModal } from './BookmarkletModal';
+import { SharedCollectionView } from './SharedCollectionView';
+import { BulkActionBar } from './BulkActionBar';
 import { getDomainName, getPageTitle } from '../utils/linkUtils';
 import { api } from '../utils/api';
 
@@ -195,6 +201,35 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   const [drawerItem, setDrawerItem] = useState(null);
   const [toast, setToast] = useState(null);
 
+  // Extended Feature Modals & States
+  const [sharedCollectionId, setSharedCollectionId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('share');
+    }
+    return null;
+  });
+  const [bookmarkletPrefill, setBookmarkletPrefill] = useState({ url: '', title: '' });
+  const [isImportExportOpen, setIsImportExportOpen] = useState(false);
+  const [isSurpriseMeOpen, setIsSurpriseMeOpen] = useState(false);
+  const [isBookmarkletOpen, setIsBookmarkletOpen] = useState(false);
+  const [qrModalItem, setQrModalItem] = useState(null);
+  const [selectedLinkIds, setSelectedLinkIds] = useState([]);
+  const [isBulkExecuting, setIsBulkExecuting] = useState(false);
+
+  // Bookmarklet and query-param handling: ?addUrl=...&addTitle=...
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const addUrl = params.get('addUrl');
+      const addTitle = params.get('addTitle');
+      if (addUrl) {
+        setBookmarkletPrefill({ url: addUrl, title: addTitle || '' });
+        setIsAddModalOpen(true);
+      }
+    }
+  }, []);
+
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
 
@@ -233,6 +268,45 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Share Collection Handler
+  const handleShareCollection = (collection) => {
+    const colId = collection.id;
+    if (!colId) {
+      showToast('This collection is only saved locally. Sync with account to share.', 'warning');
+      return;
+    }
+    const shareUrl = `${window.location.origin}/?share=${colId}`;
+    navigator.clipboard.writeText(shareUrl);
+    showToast(`Public link for "${collection.collectionName || collection.name}" copied to clipboard!`, 'success');
+  };
+
+  // Bulk Actions Handler
+  const handleBulkAction = async ({ action, targetCollectionId, tag }) => {
+    if (!selectedLinkIds.length) return;
+    setIsBulkExecuting(true);
+    try {
+      const res = await api.executeBulkAction({
+        linkIds: selectedLinkIds,
+        action,
+        targetCollectionId,
+        tag
+      });
+
+      // Reload fresh links
+      const freshLinks = await api.getLinks({ view: 'all' });
+      if (freshLinks && Array.isArray(freshLinks)) {
+        setDbLinks(freshLinks);
+      }
+
+      showToast(res.message || 'Bulk operation completed!', 'success');
+      setSelectedLinkIds([]);
+    } catch (err) {
+      showToast(err.message || 'Bulk operation failed.', 'error');
+    } finally {
+      setIsBulkExecuting(false);
+    }
+  };
 
   // Sync favorites, readLater, archive, metadata to localStorage
   useEffect(() => {
@@ -794,6 +868,19 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     return { title: 'Bookmarks', subtitle: '' };
   }, [activeView, activeCollectionId, collections, collectionCounts, searchQuery, selectedTag, displayedLinks.length, allLinks.length, favorites.length, readLater.length, archive.length]);
 
+  // Public shared collection viewer mode
+  if (sharedCollectionId) {
+    return (
+      <SharedCollectionView
+        shareId={sharedCollectionId}
+        onExit={() => {
+          setSharedCollectionId(null);
+          window.history.replaceState({}, '', window.location.pathname);
+        }}
+      />
+    );
+  }
+
   return (
     <div
       style={{
@@ -838,6 +925,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         onOpenAddCollection={() => setIsAddCollectionModalOpen(true)}
         user={{ username: data?.username, name: data?.name }}
+        onShareCollection={handleShareCollection}
       />
 
       {/* Main Workspace Frame */}
@@ -870,6 +958,9 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           isSidebarOpen={isSidebarOpen}
           user={{ username: data?.username, name: data?.name }}
           onLogout={onLogout}
+          onOpenSurpriseMe={() => setIsSurpriseMeOpen(true)}
+          onOpenImportExport={() => setIsImportExportOpen(true)}
+          onOpenBookmarklet={() => setIsBookmarkletOpen(true)}
         />
 
         {/* Content Canvas */}
@@ -1031,7 +1122,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {paginatedLinks.map((item, idx) => (
                 <LinkCard
-                  key={idx}
+                  key={item.id || idx}
                   link={item.url}
                   theme={theme}
                   viewMode="list"
@@ -1046,6 +1137,9 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   customTags={item.customTags}
                   notes={item.notes}
                   collectionName={item.collectionName}
+                  isSelected={item.id ? selectedLinkIds.includes(item.id) : false}
+                  onToggleSelect={item.id ? () => setSelectedLinkIds(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id]) : undefined}
+                  onShowQr={(it) => setQrModalItem(it)}
                   onToggleFavorite={handleToggleFavorite}
                   onToggleReadLater={handleToggleReadLater}
                   onToggleWatched={() => handleToggleWatched(item.url)}
@@ -1069,7 +1163,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
             >
               {paginatedLinks.map((item, idx) => (
                 <LinkCard
-                  key={idx}
+                  key={item.id || idx}
                   link={item.url}
                   theme={theme}
                   viewMode="grid"
@@ -1084,6 +1178,9 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   customTags={item.customTags}
                   notes={item.notes}
                   collectionName={item.collectionName}
+                  isSelected={item.id ? selectedLinkIds.includes(item.id) : false}
+                  onToggleSelect={item.id ? () => setSelectedLinkIds(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id]) : undefined}
+                  onShowQr={(it) => setQrModalItem(it)}
                   onToggleFavorite={handleToggleFavorite}
                   onToggleReadLater={handleToggleReadLater}
                   onToggleWatched={() => handleToggleWatched(item.url)}
@@ -1120,17 +1217,23 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         onDeleteItem={handleDeleteLink}
         theme={theme}
         onShowToast={showToast}
+        onShowQr={(it) => setQrModalItem(it)}
       />
 
       {/* Quick Add Link Modal */}
       <AddLinkModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setBookmarkletPrefill({ url: '', title: '' });
+        }}
         collections={collections}
         activeCollectionIndex={activeCollectionId}
         onAddLink={handleAddLink}
         theme={theme}
         onShowToast={showToast}
+        initialUrl={bookmarkletPrefill.url}
+        initialTitle={bookmarkletPrefill.title}
       />
 
       {/* Command Palette (Ctrl+K) */}
@@ -1240,6 +1343,61 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           </div>
         </div>
       )}
+
+      {/* Floating Bulk Action Bar */}
+      <BulkActionBar
+        selectedIds={selectedLinkIds}
+        allIds={displayedLinks.map(l => l.id).filter(Boolean)}
+        links={displayedLinks}
+        collections={collections}
+        onSelectAll={() => setSelectedLinkIds(displayedLinks.map(l => l.id).filter(Boolean))}
+        onClearSelection={() => setSelectedLinkIds([])}
+        onExecuteAction={handleBulkAction}
+        isLoading={isBulkExecuting}
+      />
+
+      {/* Mobile QR Code Modal */}
+      <QrCodeModal
+        isOpen={Boolean(qrModalItem)}
+        onClose={() => setQrModalItem(null)}
+        link={qrModalItem}
+      />
+
+      {/* Surprise Me / What to Read Next */}
+      <SurpriseMeModal
+        isOpen={isSurpriseMeOpen}
+        onClose={() => setIsSurpriseMeOpen(false)}
+        links={allLinks}
+        onMarkRead={handleToggleWatched}
+        onOpenDetail={(it) => setDrawerItem(it)}
+      />
+
+      {/* 1-Click Bookmarklet Instructions */}
+      <BookmarkletModal
+        isOpen={isBookmarkletOpen}
+        onClose={() => setIsBookmarkletOpen(false)}
+      />
+
+      {/* Import & Export Bookmarks Modal */}
+      <ImportExportModal
+        isOpen={isImportExportOpen}
+        onClose={() => setIsImportExportOpen(false)}
+        currentLinks={allLinks}
+        collections={collections}
+        onNotify={showToast}
+        onImportComplete={async () => {
+          try {
+            const [cols, links] = await Promise.all([
+              api.getCollections().catch(() => null),
+              api.getLinks({ view: 'all' }).catch(() => null)
+            ]);
+            if (cols) setCollections(cols);
+            if (links) setDbLinks(links);
+          } catch (err) {
+            console.warn(err);
+          }
+        }}
+      />
 
       {/* Toast Notification Container */}
       <Toast toast={toast} onClose={() => setToast(null)} theme={theme} />

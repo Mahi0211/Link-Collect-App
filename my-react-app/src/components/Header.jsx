@@ -15,7 +15,10 @@ import {
   User as UserIcon,
   Check,
   Layers,
-  ArrowUpDown
+  ArrowUpDown,
+  Sparkles,
+  Upload,
+  BookmarkPlus
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 
@@ -33,7 +36,10 @@ export const Header = ({
   onToggleSidebar,
   isSidebarOpen,
   user,
-  onLogout
+  onLogout,
+  onOpenSurpriseMe,
+  onOpenImportExport,
+  onOpenBookmarklet
 }) => {
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
@@ -337,6 +343,51 @@ export const Header = ({
               {!isMobile && <span>New Link</span>}
             </button>
 
+            {/* Surprise Me / What to Read Next */}
+            {onOpenSurpriseMe && (
+              <button
+                onClick={onOpenSurpriseMe}
+                style={{
+                  background: isDark ? '#141418' : '#f1f5f9',
+                  border: `1px solid ${colors.border}`,
+                  color: '#eab308',
+                  padding: '7px 10px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}
+                title="Surprise Me • Pick What to Read Next"
+              >
+                <Sparkles size={14} className="animate-pulse" />
+                {!isMobile && <span>Surprise Me</span>}
+              </button>
+            )}
+
+            {/* Import / Export */}
+            {onOpenImportExport && (
+              <button
+                onClick={onOpenImportExport}
+                style={{
+                  background: isDark ? '#141418' : '#f1f5f9',
+                  border: `1px solid ${colors.border}`,
+                  color: colors.text,
+                  padding: '7px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                title="Import & Export Bookmarks (HTML, CSV, JSON)"
+              >
+                <Upload size={15} />
+              </button>
+            )}
+
             {/* Theme Toggle */}
             <button
               onClick={onToggleTheme}
@@ -403,6 +454,64 @@ export const Header = ({
                       @{user?.username || 'member'}
                     </p>
                   </div>
+
+                  {onOpenBookmarklet && (
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onOpenBookmarklet();
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'none',
+                        color: colors.text,
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? '#272730' : '#f1f5f9')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <BookmarkPlus size={14} style={{ color: colors.accent }} />
+                      <span>Browser Bookmarklet</span>
+                    </button>
+                  )}
+
+                  {onOpenImportExport && (
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onOpenImportExport();
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'none',
+                        color: colors.text,
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? '#272730' : '#f1f5f9')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <Upload size={14} style={{ color: colors.accent }} />
+                      <span>Import / Export</span>
+                    </button>
+                  )}
+
+                  <div style={{ height: '1px', backgroundColor: colors.borderLight, margin: '4px 0' }} />
 
                   <button
                     onClick={() => {

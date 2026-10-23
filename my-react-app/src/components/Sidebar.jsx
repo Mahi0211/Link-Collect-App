@@ -15,7 +15,8 @@ import {
   Star,
   Flame,
   CheckCircle,
-  X
+  X,
+  Share2
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 
@@ -40,7 +41,8 @@ export const Sidebar = ({
   onToggleSidebar,
   onOpenAddCollection,
   collectionCounts = {},
-  user
+  user,
+  onShareCollection
 }) => {
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
@@ -403,21 +405,47 @@ export const Sidebar = ({
                       {collection.collectionName}
                     </span>
                   </div>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      padding: '2px 6px',
-                      borderRadius: '10px',
-                      backgroundColor: isSelected
-                        ? (isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(79, 70, 229, 0.15)')
-                        : (isDark ? '#1f1f26' : '#f1f5f9'),
-                      color: isSelected ? colors.accent : colors.textTertiary,
-                      fontWeight: '600',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {count}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                    {onShareCollection && collection.id && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onShareCollection(collection);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: colors.textTertiary,
+                          cursor: 'pointer',
+                          padding: '3px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = colors.accent)}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = colors.textTertiary)}
+                        title={`Share "${collection.collectionName}" publicly`}
+                      >
+                        <Share2 size={12} />
+                      </button>
+                    )}
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        padding: '2px 6px',
+                        borderRadius: '10px',
+                        backgroundColor: isSelected
+                          ? (isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(79, 70, 229, 0.15)')
+                          : (isDark ? '#1f1f26' : '#f1f5f9'),
+                        color: isSelected ? colors.accent : colors.textTertiary,
+                        fontWeight: '600',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {count}
+                    </span>
+                  </div>
                 </button>
               );
             })}

@@ -10,7 +10,12 @@ import {
   Star,
   CheckCircle,
   Flame,
-  MessageSquare
+  MessageSquare,
+  QrCode,
+  Square,
+  CheckSquare,
+  Activity,
+  AlertTriangle
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 import {
@@ -37,6 +42,10 @@ export const LinkCard = ({
   customTags = [],
   notes = '',
   collectionName = '',
+  isSelected = false,
+  onToggleSelect,
+  onShowQr,
+  linkStatus,
   onToggleFavorite,
   onToggleReadLater,
   onToggleWatched,
@@ -132,6 +141,30 @@ export const LinkCard = ({
       >
         {/* Top/Main Section on Mobile, Left on Desktop */}
         <div className="list-card-left">
+          {/* Multi-select Checkbox */}
+          {onToggleSelect && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelect();
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                color: isSelected ? colors.accent : colors.textTertiary,
+                display: 'flex',
+                alignItems: 'center',
+                flexShrink: 0
+              }}
+              title={isSelected ? 'Deselect link' : 'Select link'}
+            >
+              {isSelected ? <CheckSquare size={17} /> : <Square size={17} />}
+            </button>
+          )}
+
           {/* Favicon */}
           <div
             style={{
@@ -381,6 +414,29 @@ export const LinkCard = ({
               {copied ? <Check size={15} /> : <Copy size={15} />}
             </button>
 
+            {/* QR Code Button */}
+            {onShowQr && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShowQr(itemPayload);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  borderRadius: '6px',
+                  color: colors.textTertiary,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+                title="Scan QR Code"
+              >
+                <QrCode size={15} />
+              </button>
+            )}
+
             {/* Desktop External Link */}
             <a
               className="list-card-desktop-action"
@@ -494,24 +550,57 @@ export const LinkCard = ({
             zIndex: 3,
           }}
         >
-          {/* Domain Pill */}
-          <span
-            style={{
-              padding: '3px 8px',
-              borderRadius: '6px',
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              color: '#ffffff',
-              fontSize: '10.5px',
-              fontWeight: '600',
-              letterSpacing: '0.02em',
-              textTransform: 'uppercase',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-            }}
-          >
-            {preview.badge || domain}
-          </span>
+          {/* Left Pill Group: Checkbox + Domain Pill */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {onToggleSelect && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSelect();
+                }}
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  border: isSelected ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.25)',
+                  backgroundColor: isSelected ? '#6366f1' : 'rgba(0, 0, 0, 0.65)',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backdropFilter: 'blur(6px)',
+                  WebkitBackdropFilter: 'blur(6px)',
+                  transition: 'transform 0.15s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                title={isSelected ? 'Deselect link' : 'Select link'}
+              >
+                {isSelected ? <CheckSquare size={15} /> : <Square size={15} />}
+              </button>
+            )}
+
+            {/* Domain Pill */}
+            <span
+              style={{
+                padding: '3px 8px',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                color: '#ffffff',
+                fontSize: '10.5px',
+                fontWeight: '600',
+                letterSpacing: '0.02em',
+                textTransform: 'uppercase',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+              }}
+            >
+              {preview.badge || domain}
+            </span>
+          </div>
 
           {/* Quick Action Floating Controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -589,6 +678,36 @@ export const LinkCard = ({
             >
               <Clock size={14} fill={isReadLater ? '#ffffff' : 'none'} />
             </button>
+
+            {/* QR Code Button */}
+            {onShowQr && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShowQr(itemPayload);
+                }}
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                  backdropFilter: 'blur(6px)',
+                  WebkitBackdropFilter: 'blur(6px)',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'transform 0.15s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                title="Scan QR Code"
+              >
+                <QrCode size={14} />
+              </button>
+            )}
           </div>
         </div>
 
