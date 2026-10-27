@@ -30,9 +30,12 @@ public class DbSeeder
             // Ensure database schema is created
             await _context.Database.EnsureCreatedAsync();
 
-            if (await _context.Users.AnyAsync())
+            // Always ensure the clean demo user exists
+            await EnsureDemoUserAsync();
+
+            if (await _context.Users.AnyAsync(u => u.Email == "becauseiamkira1986@gmail.com"))
             {
-                _logger.LogInformation("Database already contains users. Skipping initial seed.");
+                _logger.LogInformation("Database already contains initial seed user. Skipping initial seed.");
                 return;
             }
 
@@ -166,5 +169,54 @@ public class DbSeeder
         catch { }
 
         return $"{domain} resource";
+    }
+
+    public async Task EnsureDemoUserAsync()
+    {
+        try
+        {
+            var targetEmail = "lionelmahi9@gmail.com";
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == targetEmail);
+
+            if (user == null)
+            {
+                _logger.LogInformation("Creating user {Email}...", targetEmail);
+                user = new User
+                {
+                    Email = targetEmail,
+                    Username = "Lionel Mahi",
+                    Name = "Lionel Mahi",
+                    PasswordHash = _passwordHasher.HashPassword("Mahin@99"),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("User {Email} created successfully as a clean account.", targetEmail);
+            }
+            else
+            {
+                // Clean up any previously seeded dummy collections so the account is completely fresh
+                var dummyCols = await _context.Collections
+                    .Where(c => c.UserId == user.Id && (c.Name == "Web Development" || c.Name == "Design & UI Tools" || c.Name == "Tech News & AI"))
+                    .ToListAsync();
+
+                if (dummyCols.Any())
+                {
+                    var dummyColIds = dummyCols.Select(c => c.Id).ToList();
+                    var dummyLinks = await _context.Links.Where(l => l.UserId == user.Id && l.CollectionId.HasValue && dummyColIds.Contains(l.CollectionId.Value)).ToListAsync();
+                    _context.Links.RemoveRange(dummyLinks);
+                    _context.Collections.RemoveRange(dummyCols);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Cleaned up dummy collections for user {Email}.", targetEmail);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while ensuring user exists.");
+        }
     }
 }

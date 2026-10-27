@@ -38,7 +38,7 @@ public class GlobalExceptionHandlerMiddleware
             BadRequestException badRequest => (HttpStatusCode.BadRequest, badRequest.Message),
             UnauthorizedException unauthorized => (HttpStatusCode.Unauthorized, unauthorized.Message),
             UnauthorizedAccessException unauthorizedAccess => (HttpStatusCode.Unauthorized, unauthorizedAccess.Message),
-            _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred on the server.")
+            _ => (HttpStatusCode.InternalServerError, string.IsNullOrWhiteSpace(exception.Message) ? "An unexpected error occurred on the server." : exception.Message)
         };
 
         context.Response.StatusCode = (int)statusCode;

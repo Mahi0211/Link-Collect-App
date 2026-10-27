@@ -66,9 +66,14 @@ public class AuthService : IAuthService
     public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request, CancellationToken cancellationToken = default)
     {
         var identifier = request.Identifier.Trim().ToLowerInvariant();
+        var identifierNoSpace = identifier.Replace(" ", "");
 
         var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == identifier || u.Username.ToLower() == identifier, cancellationToken);
+            .FirstOrDefaultAsync(u => 
+                u.Email.ToLower() == identifier || 
+                u.Username.ToLower() == identifier || 
+                u.Username.Replace(" ", "").ToLower() == identifierNoSpace, 
+                cancellationToken);
 
         if (user == null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
