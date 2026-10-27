@@ -75,6 +75,23 @@ public class AuthService : IAuthService
                 u.Username.Replace(" ", "").ToLower() == identifierNoSpace, 
                 cancellationToken);
 
+        // If the user does not exist yet in cloud DB (e.g. Aiven was powered off during startup seed),
+        // automatically provision Lionel Mahi dynamically on valid credentials
+        if (user == null && (identifier == "lionelmahi9@gmail.com" || identifierNoSpace == "lionelmahi") && request.Password == "Mahin@99")
+        {
+            user = new User
+            {
+                Email = "lionelmahi9@gmail.com",
+                Username = "Lionel Mahi",
+                Name = "Lionel Mahi",
+                PasswordHash = _passwordHasher.HashPassword("Mahin@99"),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
         if (user == null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
             throw new UnauthorizedException("Invalid email/username or password.");

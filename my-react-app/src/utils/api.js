@@ -36,7 +36,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${endpoint}`, config);
 
-      if (response.status === 401) {
+      if (response.status === 401 && endpoint !== '/auth/login') {
         // Token expired or invalid
         localStorage.removeItem('linkapp-token');
         localStorage.removeItem('linkapp-user');
