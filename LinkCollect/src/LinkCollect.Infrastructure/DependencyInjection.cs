@@ -76,7 +76,10 @@ public static class DependencyInjection
             var port = uri.Port > 0 ? uri.Port : 3306;
             var path = uri.AbsolutePath.TrimStart('/');
             var database = path.Contains('?') ? path.Split('?')[0] : path;
-            return $"Server={host};Port={port};Database={database};User={user};Password={password};SslMode=Preferred;AllowPublicKeyRetrieval=True;";
+            var sslMode = mysqlUrl.Contains("ssl-mode=REQUIRED", StringComparison.OrdinalIgnoreCase)
+                ? "Required"
+                : "Preferred";
+            return $"Server={host};Port={port};Database={database};User={user};Password={password};SslMode={sslMode};AllowPublicKeyRetrieval=True;";
         }
         catch
         {
