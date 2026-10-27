@@ -57,6 +57,19 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     return data?.collections || [];
   });
 
+  // Current logged in user info
+  const currentUser = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('linkapp-user');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      username: data?.username || 'Lionel Mahi',
+      name: data?.name || 'Lionel Mahi',
+      email: data?.email || 'lionelmahi9@gmail.com'
+    };
+  }, [data]);
+
   // Fetch collections and links from ASP.NET Core API on mount
   useEffect(() => {
     let isMounted = true;
@@ -68,7 +81,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         ]);
 
         if (isMounted) {
-          if (apiCols && Array.isArray(apiCols) && apiCols.length > 0) {
+          if (apiCols && Array.isArray(apiCols)) {
             setCollections(apiCols);
           }
           if (apiLinks && Array.isArray(apiLinks)) {
@@ -924,7 +937,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         isOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         onOpenAddCollection={() => setIsAddCollectionModalOpen(true)}
-        user={{ username: data?.username, name: data?.name }}
+        user={{ username: currentUser?.username || currentUser?.name || 'Lionel Mahi', name: currentUser?.name || currentUser?.username || 'Lionel Mahi', email: currentUser?.email }}
         onShareCollection={handleShareCollection}
       />
 
@@ -956,7 +969,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           onOpenAddModal={() => setIsAddModalOpen(true)}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           isSidebarOpen={isSidebarOpen}
-          user={{ username: data?.username, name: data?.name }}
+          user={{ username: currentUser?.username || currentUser?.name || 'Lionel Mahi', name: currentUser?.name || currentUser?.username || 'Lionel Mahi', email: currentUser?.email }}
           onLogout={onLogout}
           onOpenSurpriseMe={() => setIsSurpriseMeOpen(true)}
           onOpenImportExport={() => setIsImportExportOpen(true)}

@@ -19,6 +19,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
 
     try {
       const res = await api.login(email, password);
+      localStorage.removeItem('linkapp-custom-collections');
       localStorage.setItem(
         'linkapp-user',
         JSON.stringify({
