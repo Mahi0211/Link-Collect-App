@@ -11,14 +11,31 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        string? connectionString = null;
 
         var cloudUrl = Environment.GetEnvironmentVariable("DATABASE_URL")
-            ?? Environment.GetEnvironmentVariable("MYSQL_URL");
+            ?? Environment.GetEnvironmentVariable("MYSQL_URL")
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 
-        if (!string.IsNullOrWhiteSpace(cloudUrl) && cloudUrl.StartsWith("mysql://", StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(cloudUrl))
         {
-            connectionString = ParseMySqlUrl(cloudUrl);
+            var trimmed = cloudUrl.Trim();
+            if (trimmed.StartsWith("mysql://", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("mysqls://", StringComparison.OrdinalIgnoreCase))
+            {
+                connectionString = ParseMySqlUrl(trimmed);
+            }
+            else if (trimmed.Contains("Server=", StringComparison.OrdinalIgnoreCase) ||
+                     trimmed.Contains("Data Source=", StringComparison.OrdinalIgnoreCase) ||
+                     trimmed.Contains("Database=", StringComparison.OrdinalIgnoreCase))
+            {
+                connectionString = trimmed;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            connectionString = configuration.GetConnectionString("DefaultConnection");
         }
 
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -57,8 +74,9 @@ public static class DependencyInjection
             var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
             var host = uri.Host;
             var port = uri.Port > 0 ? uri.Port : 3306;
-            var database = uri.AbsolutePath.TrimStart('/');
-            return $"Server={host};Port={port};Database={database};User={user};Password={password};SslMode=Preferred;";
+            var path = uri.AbsolutePath.TrimStart('/');
+            var database = path.Contains('?') ? path.Split('?')[0] : path;
+            return $"Server={host};Port={port};Database={database};User={user};Password={password};SslMode=Preferred;AllowPublicKeyRetrieval=True;";
         }
         catch
         {

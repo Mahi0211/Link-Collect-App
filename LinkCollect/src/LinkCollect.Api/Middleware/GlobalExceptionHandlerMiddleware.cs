@@ -32,13 +32,18 @@ public class GlobalExceptionHandlerMiddleware
     {
         context.Response.ContentType = "application/json";
 
+        var baseEx = exception.GetBaseException();
+        var errorDetail = baseEx != null && baseEx != exception && !string.IsNullOrWhiteSpace(baseEx.Message)
+            ? $"{exception.Message} (Details: {baseEx.Message})"
+            : exception.Message;
+
         var (statusCode, message) = exception switch
         {
             NotFoundException notFound => (HttpStatusCode.NotFound, notFound.Message),
             BadRequestException badRequest => (HttpStatusCode.BadRequest, badRequest.Message),
             UnauthorizedException unauthorized => (HttpStatusCode.Unauthorized, unauthorized.Message),
             UnauthorizedAccessException unauthorizedAccess => (HttpStatusCode.Unauthorized, unauthorizedAccess.Message),
-            _ => (HttpStatusCode.InternalServerError, string.IsNullOrWhiteSpace(exception.Message) ? "An unexpected error occurred on the server." : exception.Message)
+            _ => (HttpStatusCode.InternalServerError, string.IsNullOrWhiteSpace(errorDetail) ? "An unexpected error occurred on the server." : errorDetail)
         };
 
         context.Response.StatusCode = (int)statusCode;
