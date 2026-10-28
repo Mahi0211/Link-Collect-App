@@ -327,19 +327,28 @@ export const Header = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                backgroundColor: colors.accent,
+                background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
                 color: '#ffffff',
                 border: 'none',
-                padding: isMobile ? '7px 10px' : '8px 14px',
-                borderRadius: '8px',
+                padding: isMobile ? '7px 12px' : '8px 16px',
+                borderRadius: '9999px',
                 fontSize: '13px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                boxShadow: `0 2px 8px ${colors.accentLight}`,
+                boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(102, 97, 241, 0.55)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 97, 241, 0.35)';
               }}
               title="Add Link (N)"
             >
-              <Plus size={16} />
+              <Plus size={16} strokeWidth={2.2} />
               {!isMobile && <span>New Link</span>}
             </button>
 
@@ -412,21 +421,32 @@ export const Header = ({
               <button
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
                 style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  backgroundColor: colors.accentLight,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.accent,
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '9999px',
+                  background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
+                  border: 'none',
+                  color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '12px',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(102, 97, 241, 0.55)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 97, 241, 0.35)';
+                }}
+                title={user?.name || user?.username || 'Profile'}
               >
-                {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                {user?.username ? user.username.charAt(0).toUpperCase() : (user?.name ? user.name.charAt(0).toUpperCase() : 'U')}
               </button>
 
               {/* Profile Dropdown */}
@@ -435,24 +455,44 @@ export const Header = ({
                   style={{
                     position: 'absolute',
                     right: 0,
-                    top: '40px',
-                    width: '200px',
+                    top: '42px',
+                    width: '210px',
                     backgroundColor: isDark ? '#18181f' : '#ffffff',
                     border: `1px solid ${colors.border}`,
-                    borderRadius: '12px',
+                    borderRadius: '14px',
                     boxShadow: colors.shadowLg,
                     padding: '8px',
                     zIndex: 60,
                     animation: 'scaleUp 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards',
                   }}
                 >
-                  <div style={{ padding: '8px 10px', borderBottom: `1px solid ${colors.borderLight}`, marginBottom: '4px' }}>
-                    <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: colors.text }}>
-                      {user?.name || 'LinkCollect User'}
-                    </p>
-                    <p style={{ margin: 0, fontSize: '11px', color: colors.textTertiary }}>
-                      @{user?.username || 'member'}
-                    </p>
+                  <div style={{ padding: '8px 10px', borderBottom: `1px solid ${colors.borderLight}`, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '9999px',
+                        background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '700',
+                        fontSize: '12px',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 6px rgba(102, 97, 241, 0.3)',
+                      }}
+                    >
+                      {user?.username ? user.username.charAt(0).toUpperCase() : (user?.name ? user.name.charAt(0).toUpperCase() : 'U')}
+                    </div>
+                    <div style={{ overflow: 'hidden' }}>
+                      <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: colors.text, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        {user?.name || user?.username || 'LinkCollect User'}
+                      </p>
+                      <p style={{ margin: 0, fontSize: '11px', color: colors.textTertiary, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        @{user?.username || 'member'}
+                      </p>
+                    </div>
                   </div>
 
                   {onOpenBookmarklet && (

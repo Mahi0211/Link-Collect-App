@@ -223,7 +223,11 @@ export function SharedCollectionView({ shareId, onExit }) {
                     href={link.url || link.link}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-1.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-indigo-600 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium px-2.5"
+                    style={{
+                      background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
+                      boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
+                    }}
+                    className="text-white rounded-full transition-all hover:-translate-y-0.5 hover:shadow-indigo-500/50 flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5"
                   >
                     <span>Visit</span>
                     <ExternalLink className="w-3.5 h-3.5" />

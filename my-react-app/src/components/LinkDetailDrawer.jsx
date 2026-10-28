@@ -527,20 +527,30 @@ export const LinkDetailDrawer = ({
                   handleIncrementWatch();
                 }}
                 style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  backgroundColor: colors.accent,
+                  padding: '7px 16px',
+                  borderRadius: '9999px',
+                  background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
                   color: '#ffffff',
                   textDecoration: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '6px',
                   fontSize: '12px',
                   fontWeight: '600',
+                  boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 97, 241, 0.55)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 97, 241, 0.35)';
                 }}
               >
                 <span>Visit</span>
-                <ExternalLink size={13} />
+                <ExternalLink size={13} strokeWidth={2.2} />
               </a>
             </div>
           </div>

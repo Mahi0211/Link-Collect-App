@@ -1215,15 +1215,24 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   else setIsAddModalOpen(true);
                 }}
                 style={{
-                  padding: '9px 18px',
-                  borderRadius: '8px',
+                  padding: '10px 20px',
+                  borderRadius: '9999px',
                   border: 'none',
-                  backgroundColor: colors.accent,
+                  background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
                   color: '#ffffff',
                   fontSize: '13px',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  boxShadow: `0 2px 8px ${colors.accentLight}`,
+                  boxShadow: '0 2px 10px rgba(102, 97, 241, 0.35)',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(102, 97, 241, 0.55)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 10px rgba(102, 97, 241, 0.35)';
                 }}
               >
                 {searchQuery ? 'Clear Search' : '+ Add First Link'}
