@@ -48,6 +48,51 @@ export const getPageTitle = (url) => {
   }
 };
 
+// Detect bookmark media type (Videos, Articles, Portals, Tools)
+export const detectMediaType = (url = '', title = '', tags = []) => {
+  const u = String(url).toLowerCase();
+  const t = String(title).toLowerCase();
+  const tagList = (tags || []).map((x) => String(x).toLowerCase());
+
+  // Check tags first
+  if (tagList.some((tag) => tag.includes('video') || tag.includes('movie') || tag.includes('clip') || tag.includes('watch'))) return 'videos';
+  if (tagList.some((tag) => tag.includes('article') || tag.includes('blog') || tag.includes('read') || tag.includes('essay') || tag.includes('news'))) return 'articles';
+  if (tagList.some((tag) => tag.includes('tool') || tag.includes('app') || tag.includes('software') || tag.includes('library') || tag.includes('util'))) return 'tools';
+  if (tagList.some((tag) => tag.includes('portal') || tag.includes('community') || tag.includes('forum') || tag.includes('social'))) return 'portals';
+
+  // Check domain & URL patterns
+  if (
+    u.includes('youtube.com') || u.includes('youtu.be') || u.includes('vimeo.com') ||
+    u.includes('tiktok.com') || u.includes('twitch.tv') || u.includes('/video') ||
+    u.includes('/watch') || u.includes('netflix.com') || u.includes('dailymotion.com')
+  ) {
+    return 'videos';
+  }
+
+  if (
+    u.includes('reddit.com') || u.includes('twitter.com') || u.includes('x.com') ||
+    u.includes('news.ycombinator.com') || u.includes('producthunt.com') ||
+    u.includes('discord.com') || u.includes('linkedin.com') || u.includes('facebook.com') ||
+    u.includes('instagram.com') || u.includes('forum') || u.includes('community') ||
+    u.includes('threads.net')
+  ) {
+    return 'portals';
+  }
+
+  if (
+    u.includes('github.com') || u.includes('gitlab.com') || u.includes('figma.com') ||
+    u.includes('codepen.io') || u.includes('npmjs.com') || u.includes('vercel.app') ||
+    u.includes('canva.com') || u.includes('chatgpt.com') || u.includes('openai.com') ||
+    u.includes('notion.so') || u.includes('tool') || u.includes('generator') ||
+    u.includes('converter') || u.includes('calculator') || u.startsWith('https://app.')
+  ) {
+    return 'tools';
+  }
+
+  // Articles / Blogs / Publications
+  return 'articles';
+};
+
 // Estimate reading time in minutes based on title / type
 export const getEstimatedReadingTime = (url) => {
   const domain = getDomainName(url).toLowerCase();

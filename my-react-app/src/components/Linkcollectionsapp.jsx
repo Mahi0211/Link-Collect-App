@@ -14,7 +14,8 @@ import {
   ExternalLink,
   Tag,
   CheckCircle2,
-  Folder
+  Folder,
+  X
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 import { Sidebar } from './Sidebar';
@@ -32,7 +33,8 @@ import { SurpriseMeModal } from './SurpriseMeModal';
 import { BookmarkletModal } from './BookmarkletModal';
 import { SharedCollectionView } from './SharedCollectionView';
 import { BulkActionBar } from './BulkActionBar';
-import { getDomainName, getPageTitle } from '../utils/linkUtils';
+import { FilterPopover, INITIAL_FILTERS, countActiveFilters } from './FilterPopover';
+import { getDomainName, getPageTitle, detectMediaType } from '../utils/linkUtils';
 import { api } from '../utils/api';
 
 export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme, onThemeChange }) {
@@ -160,6 +162,43 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState(null);
+
+  // New Filter Popover state
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
+
+  const activeFilterCount = useMemo(() => {
+    return countActiveFilters(filters, activeView === 'all');
+  }, [filters, activeView]);
+
+  const handleResetFilters = () => {
+    setFilters(INITIAL_FILTERS);
+    setCurrentPage(1);
+  };
+
+  const removeFilterItem = (key, value) => {
+    setFilters((prev) => {
+      if (key === 'mediaType') {
+        return { ...prev, mediaTypes: prev.mediaTypes.filter((t) => t !== value) };
+      }
+      if (key === 'collection') {
+        return { ...prev, collectionIds: prev.collectionIds.filter((c) => c !== value) };
+      }
+      if (key === 'rating') {
+        return { ...prev, rating: null };
+      }
+      if (key === 'dateAdded') {
+        return { ...prev, dateAdded: 'all' };
+      }
+      if (key === 'unwatched') {
+        return { ...prev, unwatchedOnly: false };
+      }
+      if (key === 'favorited') {
+        return { ...prev, favoritedOnly: false };
+      }
+      return prev;
+    });
+    setCurrentPage(1);
+  };
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -770,7 +809,57 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
       }
     }
 
-    // Step 2: Filter by Tag
+    // Step 2: Collection Filter (Multi-select in 'All Bookmarks' view)
+    if (activeView === 'all' && filters.collectionIds && filters.collectionIds.length > 0) {
+      const allowedColNames = collections
+        .filter((c) => filters.collectionIds.includes(c.id))
+        .map((c) => (c.collectionName || '').trim().toLowerCase());
+
+      list = list.filter((item) => {
+        if (item.collectionId && filters.collectionIds.includes(item.collectionId)) return true;
+        if (item.collectionName && allowedColNames.includes(item.collectionName.trim().toLowerCase())) return true;
+        return false;
+      });
+    }
+
+    // Step 3: Media Type Filter (Videos, Articles, Portals, Tools)
+    if (filters.mediaTypes && filters.mediaTypes.length > 0) {
+      list = list.filter((item) => {
+        const type = detectMediaType(item.url, item.title, item.customTags);
+        return filters.mediaTypes.includes(type);
+      });
+    }
+
+    // Step 4: Rating Filter (★ 4+, ★ 3+, Unrated)
+    if (filters.rating !== null && filters.rating !== undefined) {
+      if (filters.rating === -1) {
+        list = list.filter((item) => !item.rating || item.rating === 0);
+      } else {
+        list = list.filter((item) => (item.rating || 0) >= filters.rating);
+      }
+    }
+
+    // Step 5: Date Added Filter (Last 7d, Past month, Any time)
+    if (filters.dateAdded && filters.dateAdded !== 'all') {
+      const now = Date.now();
+      const days = filters.dateAdded === '7d' ? 7 : 30;
+      const cutoff = now - days * 24 * 60 * 60 * 1000;
+      list = list.filter((item) => {
+        if (!item.createdAt) return false;
+        const itemTime = new Date(item.createdAt).getTime();
+        return itemTime >= cutoff;
+      });
+    }
+
+    // Step 6: Status Filter (Unwatched, Favorited)
+    if (filters.unwatchedOnly) {
+      list = list.filter((item) => !item.watched && (!item.watchCount || item.watchCount === 0));
+    }
+    if (filters.favoritedOnly) {
+      list = list.filter((item) => Boolean(item.isFavorite));
+    }
+
+    // Step 7: Filter by Tag
     if (selectedTag) {
       list = list.filter((item) => (item.customTags || []).includes(selectedTag));
     }
@@ -821,7 +910,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     }
 
     return sorted;
-  }, [allLinks, activeView, activeCollectionId, collections, selectedTag, searchQuery, sortOption]);
+  }, [allLinks, activeView, activeCollectionId, collections, selectedTag, searchQuery, sortOption, filters]);
 
   // Paginated links for Grid and List views
   const paginatedLinks = useMemo(() => {
@@ -1058,28 +1147,311 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
               </p>
             </div>
 
-            {/* Quick Action Button for Empty State */}
-            <button
-              onClick={() => setIsAddModalOpen(true)}
+            {/* Action Buttons: Add to Collection & Filters */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  backgroundColor: colors.accentLight,
+                  color: colors.accent,
+                  border: `1px solid ${colors.borderActive}30`,
+                  fontSize: '12.5px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Plus size={15} />
+                <span>Add to {activeView === 'collection' ? collections[activeCollectionId]?.collectionName : 'Collection'}</span>
+              </button>
+
+              {/* Filter Popover Component */}
+              <FilterPopover
+                filters={filters}
+                onApplyFilters={(newFilters) => {
+                  setFilters(newFilters);
+                  setCurrentPage(1);
+                }}
+                onResetFilters={() => {
+                  setFilters(INITIAL_FILTERS);
+                  setCurrentPage(1);
+                }}
+                collections={collections}
+                isAllView={activeView === 'all'}
+                theme={theme}
+              />
+            </div>
+          </div>
+
+          {/* Active Filter Chips Bar */}
+          {activeFilterCount > 0 && (
+            <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
+                flexWrap: 'wrap',
                 gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                backgroundColor: colors.accentLight,
-                color: colors.accent,
-                border: `1px solid ${colors.borderActive}30`,
-                fontSize: '12.5px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
+                marginTop: '-12px',
+                marginBottom: '20px',
+                padding: '6px 0',
               }}
             >
-              <Plus size={15} />
-              <span>Add to {activeView === 'collection' ? collections[activeCollectionId]?.collectionName : 'Collection'}</span>
-            </button>
-          </div>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: colors.textTertiary,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  marginRight: '4px',
+                }}
+              >
+                Active Filters:
+              </span>
+
+              {/* Collections chips (All Bookmarks View) */}
+              {activeView === 'all' &&
+                filters.collectionIds?.map((colId) => {
+                  const col = collections.find((c) => c.id === colId);
+                  if (!col) return null;
+                  return (
+                    <span
+                      key={`col-${colId}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '4px 9px',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: '600',
+                        backgroundColor: isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(79, 70, 229, 0.08)',
+                        color: isDark ? '#c7d2fe' : '#4f46e5',
+                        border: `1px solid ${isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(79, 70, 229, 0.2)'}`,
+                      }}
+                    >
+                      <Folder size={11} style={{ color: '#818cf8' }} />
+                      <span>{col.collectionName}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFilterItem('collection', colId)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          color: 'inherit',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <X size={11} strokeWidth={2.5} />
+                      </button>
+                    </span>
+                  );
+                })}
+
+              {/* Media type chips */}
+              {filters.mediaTypes?.map((mt) => (
+                <span
+                  key={`mt-${mt}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '4px 9px',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: '600',
+                    backgroundColor: isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(79, 70, 229, 0.08)',
+                    color: isDark ? '#c7d2fe' : '#4f46e5',
+                    border: `1px solid ${isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(79, 70, 229, 0.2)'}`,
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  <span>{mt}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFilterItem('mediaType', mt)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <X size={11} strokeWidth={2.5} />
+                  </button>
+                </span>
+              ))}
+
+              {/* Rating chip */}
+              {filters.rating !== null && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '4px 9px',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: '600',
+                    backgroundColor: 'rgba(234, 179, 8, 0.14)',
+                    color: '#facc15',
+                    border: '1px solid rgba(234, 179, 8, 0.3)',
+                  }}
+                >
+                  <span>{filters.rating === -1 ? 'Unrated' : `★ ${filters.rating}+`}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFilterItem('rating')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <X size={11} strokeWidth={2.5} />
+                  </button>
+                </span>
+              )}
+
+              {/* Date chip */}
+              {filters.dateAdded !== 'all' && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '4px 9px',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: '600',
+                    backgroundColor: isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(79, 70, 229, 0.08)',
+                    color: isDark ? '#c7d2fe' : '#4f46e5',
+                    border: `1px solid ${isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(79, 70, 229, 0.2)'}`,
+                  }}
+                >
+                  <span>{filters.dateAdded === '7d' ? 'Last 7 days' : 'Past month'}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFilterItem('dateAdded')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <X size={11} strokeWidth={2.5} />
+                  </button>
+                </span>
+              )}
+
+              {/* Status chips */}
+              {filters.unwatchedOnly && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '4px 9px',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: '600',
+                    backgroundColor: isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(79, 70, 229, 0.08)',
+                    color: isDark ? '#c7d2fe' : '#4f46e5',
+                    border: `1px solid ${isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(79, 70, 229, 0.2)'}`,
+                  }}
+                >
+                  <span>Unwatched</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFilterItem('unwatched')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <X size={11} strokeWidth={2.5} />
+                  </button>
+                </span>
+              )}
+
+              {filters.favoritedOnly && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '4px 9px',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: '600',
+                    backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                    color: '#fb7185',
+                    border: '1px solid rgba(244, 63, 94, 0.3)',
+                  }}
+                >
+                  <span>Favorited</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFilterItem('favorited')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <X size={11} strokeWidth={2.5} />
+                  </button>
+                </span>
+              )}
+
+              {/* Clear All Button */}
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: colors.textTertiary,
+                  fontSize: '11.5px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginLeft: '4px',
+                  textDecoration: 'underline',
+                  padding: '2px 4px',
+                }}
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
 
           {/* Links Render Area */}
           {isLoadingApi ? (
@@ -1202,16 +1574,23 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                 <BookOpen size={24} />
               </div>
               <h3 style={{ margin: '0 0 6px 0', fontSize: '17px', fontWeight: '600', color: colors.text }}>
-                {searchQuery ? 'No matching bookmarks' : 'No links saved here yet'}
+                {searchQuery
+                  ? 'No matching bookmarks'
+                  : activeFilterCount > 0
+                  ? 'No bookmarks match your filters'
+                  : 'No links saved here yet'}
               </h3>
               <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: colors.textSecondary, lineHeight: '1.5' }}>
                 {searchQuery
                   ? `Try checking your spelling or search by another keyword or tag.`
+                  : activeFilterCount > 0
+                  ? `Try adjusting your filter criteria or click below to reset active filters.`
                   : `Start collecting links, articles, and websites to keep your workspace organized.`}
               </p>
               <button
                 onClick={() => {
                   if (searchQuery) setSearchQuery('');
+                  else if (activeFilterCount > 0) handleResetFilters();
                   else setIsAddModalOpen(true);
                 }}
                 style={{
@@ -1235,7 +1614,11 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   e.currentTarget.style.boxShadow = '0 2px 10px rgba(102, 97, 241, 0.35)';
                 }}
               >
-                {searchQuery ? 'Clear Search' : '+ Add First Link'}
+                {searchQuery
+                  ? 'Clear Search'
+                  : activeFilterCount > 0
+                  ? 'Reset All Filters'
+                  : '+ Add First Link'}
               </button>
             </div>
           ) : viewMode === 'kanban' ? (
