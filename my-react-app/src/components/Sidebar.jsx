@@ -42,7 +42,8 @@ export const Sidebar = ({
   onOpenAddCollection,
   collectionCounts = {},
   user,
-  onShareCollection
+  onShareCollection,
+  isLoading = false
 }) => {
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
@@ -337,7 +338,26 @@ export const Sidebar = ({
               </button>
             </div>
 
-            {collections.map((collection, idx) => {
+            {isLoading && collections.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '4px 8px' }}>
+                <div
+                  className="animate-pulse"
+                  style={{
+                    height: '28px',
+                    borderRadius: '6px',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0',
+                  }}
+                />
+                <div
+                  className="animate-pulse"
+                  style={{
+                    height: '28px',
+                    borderRadius: '6px',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0',
+                  }}
+                />
+              </div>
+            ) : collections.map((collection, idx) => {
               const isSelected = activeView === 'collection' && activeCollectionId === idx;
               const nameKey = (collection.collectionName || '').trim().toLowerCase();
               const count = (collection.id ? collectionCounts[`id_${collection.id}`] : undefined)

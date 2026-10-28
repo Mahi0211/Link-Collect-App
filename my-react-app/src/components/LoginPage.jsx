@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Layers, Mail, Lock, ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import { themes } from '../utils/themes';
-import { api } from '../utils/api';
+import { api, clearUserSession } from '../utils/api';
 
 export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
   const [email, setEmail] = useState('');
@@ -19,7 +19,11 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
 
     try {
       const res = await api.login(email, password);
-      localStorage.removeItem('linkapp-custom-collections');
+      // Ensure no residual user data or cached collections leak from previous account
+      clearUserSession();
+      if (res?.token) {
+        api.setToken(res.token);
+      }
       localStorage.setItem(
         'linkapp-user',
         JSON.stringify({
@@ -34,6 +38,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
       onLoginSuccess();
     } catch (err) {
       if (email === data.email && password === data.password) {
+        clearUserSession();
         localStorage.setItem(
           'linkapp-user',
           JSON.stringify({

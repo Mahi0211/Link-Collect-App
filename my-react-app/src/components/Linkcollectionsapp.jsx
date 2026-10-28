@@ -41,10 +41,11 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     return localStorage.getItem('linkapp-theme') || initialTheme || 'dark';
   });
 
-  // Backend links state
+  // Backend links & loading state
   const [dbLinks, setDbLinks] = useState(null);
+  const [isLoadingApi, setIsLoadingApi] = useState(true);
 
-  // Collections state (initialized with data.collections + local additions)
+  // Collections state (initialized with local additions, never global sample data)
   const [collections, setCollections] = useState(() => {
     const saved = localStorage.getItem('linkapp-custom-collections');
     if (saved) {
@@ -54,7 +55,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         // fallback
       }
     }
-    return data?.collections || [];
+    return [];
   });
 
   // Current logged in user info
@@ -74,6 +75,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   useEffect(() => {
     let isMounted = true;
     const loadApiData = async () => {
+      setIsLoadingApi(true);
       try {
         const [apiCols, apiLinks] = await Promise.all([
           api.getCollections().catch(() => null),
@@ -83,13 +85,25 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         if (isMounted) {
           if (apiCols && Array.isArray(apiCols)) {
             setCollections(apiCols);
+          } else {
+            setCollections([]);
           }
           if (apiLinks && Array.isArray(apiLinks)) {
             setDbLinks(apiLinks);
+          } else {
+            setDbLinks([]);
           }
         }
       } catch (err) {
         console.warn('API sync initial notice:', err.message);
+        if (isMounted) {
+          setDbLinks([]);
+          setCollections([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingApi(false);
+        }
       }
     };
 
@@ -340,7 +354,8 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
 
   // Aggregate all links with ratings, watched state, and reviews
   const allLinks = useMemo(() => {
-    if (dbLinks && dbLinks.length > 0) {
+    // 1. If backend links have been loaded (or empty array), use them directly
+    if (dbLinks !== null) {
       return dbLinks.map((l, index) => ({
         id: l.id,
         link: l.url,
@@ -363,6 +378,11 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         updatedAt: l.updatedAt,
         _origIndex: index,
       }));
+    }
+
+    // 2. While initial API is loading, return empty array to prevent data leakage
+    if (isLoadingApi) {
+      return [];
     }
 
     let origIdx = 0;
@@ -392,7 +412,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         };
       })
     );
-  }, [dbLinks, collections, linkMetadata, favorites, readLater, archive]);
+  }, [dbLinks, isLoadingApi, collections, linkMetadata, favorites, readLater, archive]);
 
   // Dynamic link count per collection based on current allLinks
   const collectionCounts = useMemo(() => {
@@ -827,7 +847,9 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     if (activeView === 'all') {
       return {
         title: 'All Bookmarks',
-        subtitle: `${allLinks.length} total saved links across ${collections.length} collections`,
+        subtitle: isLoadingApi
+          ? 'Loading your bookmarks...'
+          : `${allLinks.length} total saved links across ${collections.length} collections`,
       };
     }
     if (activeView === 'favorites') {
@@ -879,7 +901,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
       };
     }
     return { title: 'Bookmarks', subtitle: '' };
-  }, [activeView, activeCollectionId, collections, collectionCounts, searchQuery, selectedTag, displayedLinks.length, allLinks.length, favorites.length, readLater.length, archive.length]);
+  }, [activeView, activeCollectionId, collections, collectionCounts, searchQuery, selectedTag, displayedLinks.length, allLinks.length, favorites.length, readLater.length, archive.length, isLoadingApi]);
 
   // Public shared collection viewer mode
   if (sharedCollectionId) {
@@ -939,6 +961,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         onOpenAddCollection={() => setIsAddCollectionModalOpen(true)}
         user={{ username: currentUser?.username || currentUser?.name || 'Lionel Mahi', name: currentUser?.name || currentUser?.username || 'Lionel Mahi', email: currentUser?.email }}
         onShareCollection={handleShareCollection}
+        isLoading={isLoadingApi}
       />
 
       {/* Main Workspace Frame */}
@@ -1059,7 +1082,98 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           </div>
 
           {/* Links Render Area */}
-          {displayedLinks.length === 0 ? (
+          {isLoadingApi ? (
+            /* Skeleton Loading Grid */
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile
+                  ? '1fr'
+                  : 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: isMobile ? '14px' : '18px',
+              }}
+            >
+              {[1, 2, 3, 4, 5, 6].map((idx) => (
+                <div
+                  key={idx}
+                  className="animate-pulse"
+                  style={{
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#ffffff',
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: '16px',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '14px',
+                    minHeight: '175px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '8px',
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0',
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: '90px',
+                          height: '14px',
+                          borderRadius: '4px',
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0',
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '6px',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9',
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      width: '85%',
+                      height: '16px',
+                      borderRadius: '4px',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0',
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: '60%',
+                      height: '12px',
+                      borderRadius: '4px',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9',
+                    }}
+                  />
+                  <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
+                    <div
+                      style={{
+                        width: '56px',
+                        height: '20px',
+                        borderRadius: '10px',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#e2e8f0',
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: '46px',
+                        height: '20px',
+                        borderRadius: '10px',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#e2e8f0',
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : displayedLinks.length === 0 ? (
             /* Elegant Empty State */
             <div
               style={{

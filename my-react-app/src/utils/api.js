@@ -4,6 +4,23 @@ const API_BASE = import.meta.env.VITE_API_URL || (
     : '/api'
 );
 
+export function clearUserSession() {
+  const keysToRemove = [
+    'linkapp-token',
+    'linkapp-user',
+    'linkapp-custom-collections',
+    'linkapp-favorites',
+    'linkapp-readlater',
+    'linkapp-archive',
+    'linkapp-link-metadata',
+  ];
+  keysToRemove.forEach((key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+  });
+}
+
 class ApiClient {
   getToken() {
     return localStorage.getItem('linkapp-token');
@@ -37,9 +54,8 @@ class ApiClient {
       const response = await fetch(`${API_BASE}${endpoint}`, config);
 
       if (response.status === 401 && endpoint !== '/auth/login') {
-        // Token expired or invalid
-        localStorage.removeItem('linkapp-token');
-        localStorage.removeItem('linkapp-user');
+        // Token expired or invalid - clear entire user session
+        clearUserSession();
         window.dispatchEvent(new Event('linkapp-unauthorized'));
         throw new Error('Session expired. Please log in again.');
       }

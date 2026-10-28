@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LoginPage } from './components/LoginPage';
 import rawData from './sample-data.json';
 import LinkCollectionsApp from './components/Linkcollectionsapp';
+import { clearUserSession } from './utils/api';
 
 const data = {
   ...rawData,
@@ -25,14 +26,14 @@ export default function App() {
       const user = JSON.parse(savedUser);
       return Boolean(user?.isLoggedIn);
     } catch {
-      localStorage.removeItem('linkapp-user');
-      localStorage.removeItem('linkapp-token');
+      clearUserSession();
       return false;
     }
   });
 
   useEffect(() => {
     const handleUnauthorized = () => {
+      clearUserSession();
       setIsLoggedIn(false);
     };
     window.addEventListener('linkapp-unauthorized', handleUnauthorized);
@@ -44,8 +45,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('linkapp-user');
-    localStorage.removeItem('linkapp-token');
+    clearUserSession();
     setIsLoggedIn(false);
   };
 
@@ -84,7 +84,11 @@ export default function App() {
 
   return (
     <LinkCollectionsApp
-      data={data}
+      data={{
+        email: data.email,
+        username: data.username,
+        name: data.name,
+      }}
       onLogout={handleLogout}
       theme={theme}
       onThemeChange={handleThemeChange}
