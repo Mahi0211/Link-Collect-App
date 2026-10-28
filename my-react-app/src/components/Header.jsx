@@ -330,13 +330,13 @@ export const Header = ({
                 background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
                 color: '#ffffff',
                 border: 'none',
-                padding: isMobile ? '7px 12px' : '8px 16px',
-                borderRadius: '9999px',
+                padding: isMobile ? '7px 10px' : '8px 14px',
+                borderRadius: '8px',
                 fontSize: '13px',
                 fontWeight: '600',
                 cursor: 'pointer',
                 boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                transition: 'all 0.15s ease',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-1px)';
@@ -421,9 +421,9 @@ export const Header = ({
               <button
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
                 style={{
-                  width: '34px',
-                  height: '34px',
-                  borderRadius: '9999px',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
                   background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
                   border: 'none',
                   color: '#ffffff',
@@ -432,9 +432,9 @@ export const Header = ({
                   justifyContent: 'center',
                   cursor: 'pointer',
                   fontWeight: '700',
-                  fontSize: '13px',
+                  fontSize: '12.5px',
                   boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.05)';
@@ -455,11 +455,11 @@ export const Header = ({
                   style={{
                     position: 'absolute',
                     right: 0,
-                    top: '42px',
+                    top: '40px',
                     width: '210px',
                     backgroundColor: isDark ? '#18181f' : '#ffffff',
                     border: `1px solid ${colors.border}`,
-                    borderRadius: '14px',
+                    borderRadius: '12px',
                     boxShadow: colors.shadowLg,
                     padding: '8px',
                     zIndex: 60,
@@ -471,7 +471,7 @@ export const Header = ({
                       style={{
                         width: '32px',
                         height: '32px',
-                        borderRadius: '9999px',
+                        borderRadius: '8px',
                         background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
                         color: '#ffffff',
                         display: 'flex',

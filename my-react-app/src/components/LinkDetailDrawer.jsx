@@ -527,8 +527,8 @@ export const LinkDetailDrawer = ({
                   handleIncrementWatch();
                 }}
                 style={{
-                  padding: '7px 16px',
-                  borderRadius: '9999px',
+                  padding: '7px 14px',
+                  borderRadius: '8px',
                   background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
                   color: '#ffffff',
                   textDecoration: 'none',
@@ -538,7 +538,7 @@ export const LinkDetailDrawer = ({
                   fontSize: '12px',
                   fontWeight: '600',
                   boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-1px)';

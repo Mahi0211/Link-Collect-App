@@ -227,7 +227,7 @@ export function SharedCollectionView({ shareId, onExit }) {
                       background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
                       boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
                     }}
-                    className="text-white rounded-full transition-all hover:-translate-y-0.5 hover:shadow-indigo-500/50 flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5"
+                    className="text-white rounded-lg transition-all hover:-translate-y-0.5 hover:shadow-indigo-500/50 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5"
                   >
                     <span>Visit</span>
                     <ExternalLink className="w-3.5 h-3.5" />

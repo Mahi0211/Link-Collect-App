@@ -167,13 +167,15 @@ export const Pagination = ({
                 height: '32px',
                 borderRadius: '6px',
                 border: isActive ? 'none' : `1px solid ${colors.border}`,
-                backgroundColor: isActive ? colors.accent : (isDark ? colors.bgTertiary : '#ffffff'),
+                background: isActive
+                  ? 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)'
+                  : (isDark ? colors.bgTertiary : '#ffffff'),
                 color: isActive ? '#ffffff' : colors.text,
                 cursor: 'pointer',
                 fontSize: '12.5px',
                 fontWeight: isActive ? '700' : '500',
                 transition: 'all 0.15s ease',
-                boxShadow: isActive ? `0 2px 8px ${colors.accentLight}` : 'none',
+                boxShadow: isActive ? '0 2px 8px rgba(102, 97, 241, 0.35)' : 'none',
               }}
             >
               {p}
