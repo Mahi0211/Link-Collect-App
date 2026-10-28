@@ -213,6 +213,11 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     setCurrentPage(1);
   }, [activeView, activeCollectionId, searchQuery, selectedTag, sortOption, itemsPerPage]);
 
+  // Reset filters when navigating between views or collections
+  useEffect(() => {
+    setFilters(INITIAL_FILTERS);
+  }, [activeView, activeCollectionId]);
+
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
     mainFrameRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1026,12 +1031,14 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         onSelectView={(view) => {
           setActiveView(view);
           setSelectedTag(null);
+          setFilters(INITIAL_FILTERS);
         }}
         activeCollectionId={activeCollectionId}
         onSelectCollection={(idx) => {
           setActiveView('collection');
           setActiveCollectionId(idx);
           setSelectedTag(null);
+          setFilters(INITIAL_FILTERS);
         }}
         favoriteCount={favorites.length}
         readLaterCount={readLater.length}
@@ -1762,10 +1769,14 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         allLinks={allLinks}
         collections={collections}
         onSelectLink={(item) => setDrawerItem(item)}
-        onSelectView={(view) => setActiveView(view)}
+        onSelectView={(view) => {
+          setActiveView(view);
+          setFilters(INITIAL_FILTERS);
+        }}
         onSelectCollection={(idx) => {
           setActiveView('collection');
           setActiveCollectionId(idx);
+          setFilters(INITIAL_FILTERS);
         }}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onToggleTheme={handleToggleTheme}

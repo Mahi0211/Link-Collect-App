@@ -48,21 +48,25 @@ export const FilterPopover = ({
   const [collectionSearch, setCollectionSearch] = useState('');
   const popoverRef = useRef(null);
 
-  // Synchronize draft when incoming filters change
+  // Synchronize draft when incoming filters change or when popover opens/closes
   useEffect(() => {
     setDraft(filters);
-  }, [filters]);
+  }, [filters, isOpen]);
 
-  // Click outside to close
+  // Click outside to close and discard unapplied draft changes
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (e) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target)) {
         setIsOpen(false);
+        setDraft(filters);
       }
     };
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setIsOpen(false);
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+        setDraft(filters);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -71,7 +75,18 @@ export const FilterPopover = ({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, filters]);
+
+  const handleToggleOpen = () => {
+    if (isOpen) {
+      setIsOpen(false);
+      setDraft(filters);
+    } else {
+      setDraft(filters);
+      setCollectionSearch('');
+      setIsOpen(true);
+    }
+  };
 
   const activeCount = countActiveFilters(filters, isAllView);
 
@@ -117,7 +132,7 @@ export const FilterPopover = ({
     <div ref={popoverRef} style={{ position: 'relative' }}>
       {/* Trigger Button near Add to Collection */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleOpen}
         style={{
           display: 'flex',
           alignItems: 'center',
