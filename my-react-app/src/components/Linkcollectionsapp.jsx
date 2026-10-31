@@ -757,30 +757,29 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     e.preventDefault();
     if (!newCollectionName.trim()) return;
     const trimmed = newCollectionName.trim();
-    if (collections.some((c) => c.collectionName.toLowerCase() === trimmed.toLowerCase())) {
+    if (collections.some((c) => (c.collectionName || '').toLowerCase() === trimmed.toLowerCase())) {
       showToast('A collection with this name already exists', 'error');
       return;
     }
 
-    let createdCol = null;
     try {
-      createdCol = await api.createCollection(trimmed);
+      const createdCol = await api.createCollection(trimmed);
+      const newCol = createdCol || {
+        collectionName: trimmed,
+        totalLinks: 0,
+        links: [],
+      };
+      const updated = [...collections, newCol];
+      saveCollections(updated);
+      setNewCollectionName('');
+      setIsAddCollectionModalOpen(false);
+      setActiveView('collection');
+      setActiveCollectionId(updated.length - 1);
+      showToast(`Created collection "${trimmed}"!`);
     } catch (err) {
-      console.warn('API create collection notice:', err.message);
+      console.error('Failed to create collection:', err);
+      showToast(err.message || 'Failed to save collection to database', 'error');
     }
-
-    const newCol = createdCol || {
-      collectionName: trimmed,
-      totalLinks: 0,
-      links: [],
-    };
-    const updated = [...collections, newCol];
-    saveCollections(updated);
-    setNewCollectionName('');
-    setIsAddCollectionModalOpen(false);
-    setActiveView('collection');
-    setActiveCollectionId(updated.length - 1);
-    showToast(`Created collection "${trimmed}"!`);
   };
 
   // Filter links based on active view, search, and tags
