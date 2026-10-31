@@ -43,6 +43,22 @@ public static class DependencyInjection
             connectionString = "Server=localhost;Database=linkcollect_db;User=root;Password=Mahin@99;";
         }
 
+        // Safeguard: Ensure a valid application database (defaulting to 'test') is always specified.
+        // If Database is missing or set to 'sys', MySQL queries will fail against the internal system schema.
+        if (!connectionString.Contains("Database=", StringComparison.OrdinalIgnoreCase))
+        {
+            connectionString = connectionString.TrimEnd(';') + ";Database=test;";
+        }
+        else
+        {
+            connectionString = System.Text.RegularExpressions.Regex.Replace(
+                connectionString,
+                @"Database\s*=\s*(sys|mysql|information_schema|performance_schema)\b",
+                "Database=test",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+            );
+        }
+
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             options.UseMySql(
@@ -76,6 +92,12 @@ public static class DependencyInjection
             var port = uri.Port > 0 ? uri.Port : 3306;
             var path = uri.AbsolutePath.TrimStart('/');
             var database = path.Contains('?') ? path.Split('?')[0] : path;
+            if (string.IsNullOrWhiteSpace(database) || 
+                database.Equals("sys", StringComparison.OrdinalIgnoreCase) ||
+                database.Equals("mysql", StringComparison.OrdinalIgnoreCase))
+            {
+                database = "test";
+            }
             var sslMode = mysqlUrl.Contains("ssl-mode=REQUIRED", StringComparison.OrdinalIgnoreCase)
                 ? "Required"
                 : "Preferred";
