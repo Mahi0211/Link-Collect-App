@@ -24,74 +24,78 @@ public class SocialService : ISocialService
             throw new NotFoundException("User not found or is not in your friends list.");
         }
 
-        var friend = await _context.Users.FindAsync(new object[] { friendId }, cancellationToken);
+        var friend = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == friendId, cancellationToken);
+
         if (friend == null)
         {
             throw new NotFoundException("User not found.");
         }
 
         var collections = await _context.Collections
-            .Include(c => c.Links)
-            .Include(c => c.Ratings)
+            .AsNoTracking()
             .Where(c => c.UserId == friendId && c.IsPublic)
             .OrderByDescending(c => c.CreatedAt)
+            .Select(c => new SharedCollectionDto
+            {
+                Id = c.Id,
+                CollectionName = c.Name,
+                Description = c.Description,
+                OwnerId = friend.Id,
+                OwnerUsername = friend.Username,
+                OwnerName = friend.Name,
+                TotalLinks = c.Links.Count(l => l.IsPublic && !l.IsArchived),
+                AverageRating = c.Ratings.Any() ? Math.Round(c.Ratings.Average(r => r.Score), 1) : 0,
+                TotalRatings = c.Ratings.Count,
+                CurrentUserRating = c.Ratings.Where(r => r.UserId == currentUserId).Select(r => (int?)r.Score).FirstOrDefault(),
+                CreatedAt = c.CreatedAt,
+                UpdatedAt = c.UpdatedAt
+            })
             .ToListAsync(cancellationToken);
 
-        return collections.Select(c => new SharedCollectionDto
-        {
-            Id = c.Id,
-            CollectionName = c.Name,
-            Description = c.Description,
-            OwnerId = friend.Id,
-            OwnerUsername = friend.Username,
-            OwnerName = friend.Name,
-            TotalLinks = c.Links.Count(l => l.IsPublic && !l.IsArchived),
-            AverageRating = c.Ratings.Any() ? Math.Round(c.Ratings.Average(r => r.Score), 1) : 0,
-            TotalRatings = c.Ratings.Count,
-            CurrentUserRating = c.Ratings.FirstOrDefault(r => r.UserId == currentUserId)?.Score,
-            CreatedAt = c.CreatedAt,
-            UpdatedAt = c.UpdatedAt
-        }).ToList();
+        return collections;
     }
 
     public async Task<SharedCollectionDto> GetPublicCollectionDetailsAsync(int currentUserId, int collectionId, CancellationToken cancellationToken = default)
     {
         var collection = await _context.Collections
-            .Include(c => c.User)
-            .Include(c => c.Links)
-            .Include(c => c.Ratings)
-            .FirstOrDefaultAsync(c => c.Id == collectionId && c.IsPublic, cancellationToken);
+            .AsNoTracking()
+            .Where(c => c.Id == collectionId && c.IsPublic)
+            .Select(c => new SharedCollectionDto
+            {
+                Id = c.Id,
+                CollectionName = c.Name,
+                Description = c.Description,
+                OwnerId = c.UserId,
+                OwnerUsername = c.User != null ? c.User.Username : "",
+                OwnerName = c.User != null ? c.User.Name : "",
+                TotalLinks = c.Links.Count(l => l.IsPublic && !l.IsArchived),
+                AverageRating = c.Ratings.Any() ? Math.Round(c.Ratings.Average(r => r.Score), 1) : 0,
+                TotalRatings = c.Ratings.Count,
+                CurrentUserRating = c.Ratings.Where(r => r.UserId == currentUserId).Select(r => (int?)r.Score).FirstOrDefault(),
+                CreatedAt = c.CreatedAt,
+                UpdatedAt = c.UpdatedAt
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (collection == null)
         {
             throw new NotFoundException("Collection not found or is private.");
         }
 
-        if (collection.UserId != currentUserId && !await _friendService.AreFriendsAsync(currentUserId, collection.UserId, cancellationToken))
+        if (collection.OwnerId != currentUserId && !await _friendService.AreFriendsAsync(currentUserId, collection.OwnerId, cancellationToken))
         {
             throw new NotFoundException("Collection not found or is private.");
         }
 
-        return new SharedCollectionDto
-        {
-            Id = collection.Id,
-            CollectionName = collection.Name,
-            Description = collection.Description,
-            OwnerId = collection.UserId,
-            OwnerUsername = collection.User?.Username ?? "",
-            OwnerName = collection.User?.Name ?? "",
-            TotalLinks = collection.Links.Count(l => l.IsPublic && !l.IsArchived),
-            AverageRating = collection.Ratings.Any() ? Math.Round(collection.Ratings.Average(r => r.Score), 1) : 0,
-            TotalRatings = collection.Ratings.Count,
-            CurrentUserRating = collection.Ratings.FirstOrDefault(r => r.UserId == currentUserId)?.Score,
-            CreatedAt = collection.CreatedAt,
-            UpdatedAt = collection.UpdatedAt
-        };
+        return collection;
     }
 
     public async Task<List<SharedLinkDto>> GetPublicCollectionLinksAsync(int currentUserId, int collectionId, CancellationToken cancellationToken = default)
     {
         var collection = await _context.Collections
+            .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == collectionId && c.IsPublic, cancellationToken);
 
         if (collection == null)
@@ -105,6 +109,7 @@ public class SocialService : ISocialService
         }
 
         var links = await _context.Links
+            .AsNoTracking()
             .Include(l => l.LinkTags)
                 .ThenInclude(lt => lt.Tag)
             .Where(l => l.CollectionId == collectionId && l.IsPublic && !l.IsArchived)

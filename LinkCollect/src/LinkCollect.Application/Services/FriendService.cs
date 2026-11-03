@@ -17,36 +17,56 @@ public class FriendService : IFriendService
 
     public async Task<List<FriendDto>> GetFriendsAsync(int currentUserId, CancellationToken cancellationToken = default)
     {
-        var friendships = await _context.Friendships
-            .Include(f => f.User1)
-                .ThenInclude(u => u!.Collections)
-            .Include(f => f.User1)
-                .ThenInclude(u => u!.Links)
-            .Include(f => f.User2)
-                .ThenInclude(u => u!.Collections)
-            .Include(f => f.User2)
-                .ThenInclude(u => u!.Links)
+        var friendPairs = await _context.Friendships
+            .AsNoTracking()
             .Where(f => f.User1Id == currentUserId || f.User2Id == currentUserId)
             .OrderByDescending(f => f.CreatedAt)
+            .Select(f => new
+            {
+                FriendUserId = f.User1Id == currentUserId ? f.User2Id : f.User1Id,
+                FriendsSince = f.CreatedAt
+            })
             .ToListAsync(cancellationToken);
 
-        var list = new List<FriendDto>();
-
-        foreach (var f in friendships)
+        if (!friendPairs.Any())
         {
-            var otherUser = f.User1Id == currentUserId ? f.User2 : f.User1;
-            if (otherUser == null) continue;
+            return new List<FriendDto>();
+        }
 
-            list.Add(new FriendDto
+        var friendUserIds = friendPairs.Select(p => p.FriendUserId).ToList();
+
+        var usersInfo = await _context.Users
+            .AsNoTracking()
+            .Where(u => friendUserIds.Contains(u.Id))
+            .Select(u => new
             {
-                Id = otherUser.Id,
-                Username = otherUser.Username,
-                Name = otherUser.Name,
-                Email = otherUser.Email,
-                FriendsSince = f.CreatedAt,
-                PublicCollectionsCount = otherUser.Collections.Count(c => c.IsPublic),
-                PublicLinksCount = otherUser.Links.Count(l => l.IsPublic && !l.IsArchived)
-            });
+                u.Id,
+                u.Username,
+                u.Name,
+                u.Email,
+                PublicCollectionsCount = u.Collections.Count(c => c.IsPublic),
+                PublicLinksCount = u.Links.Count(l => l.IsPublic && !l.IsArchived)
+            })
+            .ToListAsync(cancellationToken);
+
+        var usersDict = usersInfo.ToDictionary(u => u.Id);
+
+        var list = new List<FriendDto>();
+        foreach (var pair in friendPairs)
+        {
+            if (usersDict.TryGetValue(pair.FriendUserId, out var u))
+            {
+                list.Add(new FriendDto
+                {
+                    Id = u.Id,
+                    Username = u.Username,
+                    Name = u.Name,
+                    Email = u.Email,
+                    FriendsSince = pair.FriendsSince,
+                    PublicCollectionsCount = u.PublicCollectionsCount,
+                    PublicLinksCount = u.PublicLinksCount
+                });
+            }
         }
 
         return list;
@@ -55,8 +75,7 @@ public class FriendService : IFriendService
     public async Task<List<FriendRequestDto>> GetPendingRequestsAsync(int currentUserId, CancellationToken cancellationToken = default)
     {
         return await _context.FriendRequests
-            .Include(fr => fr.Sender)
-            .Include(fr => fr.Receiver)
+            .AsNoTracking()
             .Where(fr => fr.ReceiverId == currentUserId && fr.Status == "Pending")
             .OrderByDescending(fr => fr.CreatedAt)
             .Select(fr => new FriendRequestDto
