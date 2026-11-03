@@ -24,7 +24,11 @@ public class CollectionService : ICollectionService
             {
                 Id = c.Id,
                 CollectionName = c.Name,
+                Description = c.Description,
+                IsPublic = c.IsPublic,
                 TotalLinks = c.Links.Count,
+                AverageRating = c.Ratings.Any() ? Math.Round(c.Ratings.Average(r => r.Score), 1) : 0,
+                TotalRatings = c.Ratings.Count,
                 CreatedAt = c.CreatedAt,
                 UpdatedAt = c.UpdatedAt
             })
@@ -47,6 +51,8 @@ public class CollectionService : ICollectionService
         {
             UserId = userId,
             Name = trimmedName,
+            Description = request.Description?.Trim(),
+            IsPublic = request.IsPublic,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -58,7 +64,11 @@ public class CollectionService : ICollectionService
         {
             Id = collection.Id,
             CollectionName = collection.Name,
+            Description = collection.Description,
+            IsPublic = collection.IsPublic,
             TotalLinks = 0,
+            AverageRating = 0,
+            TotalRatings = 0,
             CreatedAt = collection.CreatedAt,
             UpdatedAt = collection.UpdatedAt
         };
@@ -68,6 +78,7 @@ public class CollectionService : ICollectionService
     {
         var collection = await _context.Collections
             .Include(c => c.Links)
+            .Include(c => c.Ratings)
             .FirstOrDefaultAsync(c => c.Id == collectionId && c.UserId == userId, cancellationToken);
 
         if (collection == null)
@@ -75,16 +86,30 @@ public class CollectionService : ICollectionService
             throw new NotFoundException("Collection not found.");
         }
 
-        var trimmedName = request.CollectionName.Trim();
-        var nameConflict = await _context.Collections
-            .AnyAsync(c => c.UserId == userId && c.Id != collectionId && c.Name.ToLower() == trimmedName.ToLower(), cancellationToken);
-
-        if (nameConflict)
+        if (!string.IsNullOrWhiteSpace(request.CollectionName))
         {
-            throw new BadRequestException("Another collection with this name already exists.");
+            var trimmedName = request.CollectionName.Trim();
+            var nameConflict = await _context.Collections
+                .AnyAsync(c => c.UserId == userId && c.Id != collectionId && c.Name.ToLower() == trimmedName.ToLower(), cancellationToken);
+
+            if (nameConflict)
+            {
+                throw new BadRequestException("Another collection with this name already exists.");
+            }
+
+            collection.Name = trimmedName;
         }
 
-        collection.Name = trimmedName;
+        if (request.Description != null)
+        {
+            collection.Description = request.Description.Trim();
+        }
+
+        if (request.IsPublic.HasValue)
+        {
+            collection.IsPublic = request.IsPublic.Value;
+        }
+
         collection.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -93,7 +118,11 @@ public class CollectionService : ICollectionService
         {
             Id = collection.Id,
             CollectionName = collection.Name,
+            Description = collection.Description,
+            IsPublic = collection.IsPublic,
             TotalLinks = collection.Links.Count,
+            AverageRating = collection.Ratings.Any() ? Math.Round(collection.Ratings.Average(r => r.Score), 1) : 0,
+            TotalRatings = collection.Ratings.Count,
             CreatedAt = collection.CreatedAt,
             UpdatedAt = collection.UpdatedAt
         };

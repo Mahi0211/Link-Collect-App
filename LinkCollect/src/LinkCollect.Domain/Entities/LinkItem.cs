@@ -10,6 +10,7 @@ public class LinkItem
     public string Title { get; set; } = string.Empty;
     public string Domain { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+    public bool IsPublic { get; set; }
 
     public bool IsFavorite { get; set; }
     public bool IsReadLater { get; set; }

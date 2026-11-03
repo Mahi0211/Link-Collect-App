@@ -158,6 +158,7 @@ public class LinkService : ILinkService
             Title = title,
             Domain = domain,
             Notes = request.Notes?.Trim() ?? string.Empty,
+            IsPublic = request.IsPublic ?? false,
             IsFavorite = request.IsFavorite,
             IsReadLater = request.IsReadLater,
             IsArchived = request.IsArchived,
@@ -211,6 +212,11 @@ public class LinkService : ILinkService
         if (request.Notes != null)
         {
             linkItem.Notes = request.Notes.Trim();
+        }
+
+        if (request.IsPublic.HasValue)
+        {
+            linkItem.IsPublic = request.IsPublic.Value;
         }
 
         if (request.CollectionId.HasValue)
@@ -699,6 +705,7 @@ public class LinkService : ILinkService
             Title = l.Title,
             Domain = l.Domain,
             Notes = l.Notes,
+            IsPublic = l.IsPublic,
             CustomTags = l.LinkTags.Where(lt => lt.Tag != null).Select(lt => lt.Tag!.Name).ToList(),
             IsFavorite = l.IsFavorite,
             IsReadLater = l.IsReadLater,

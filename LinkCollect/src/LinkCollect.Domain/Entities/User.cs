@@ -14,4 +14,9 @@ public class User
     public ICollection<Collection> Collections { get; set; } = new List<Collection>();
     public ICollection<LinkItem> Links { get; set; } = new List<LinkItem>();
     public ICollection<Tag> Tags { get; set; } = new List<Tag>();
+    public ICollection<FriendRequest> SentFriendRequests { get; set; } = new List<FriendRequest>();
+    public ICollection<FriendRequest> ReceivedFriendRequests { get; set; } = new List<FriendRequest>();
+    public ICollection<Friendship> FriendshipsAsUser1 { get; set; } = new List<Friendship>();
+    public ICollection<Friendship> FriendshipsAsUser2 { get; set; } = new List<Friendship>();
+    public ICollection<CollectionRating> CollectionRatings { get; set; } = new List<CollectionRating>();
 }

@@ -12,6 +12,7 @@ public class LinkDto
     public string Title { get; set; } = string.Empty;
     public string Domain { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+    public bool IsPublic { get; set; }
     public List<string> CustomTags { get; set; } = new();
 
     public bool IsFavorite { get; set; }
@@ -37,6 +38,7 @@ public class CreateLinkDto
     public string? CollectionName { get; set; }
     public int? CollectionId { get; set; }
     public string? Notes { get; set; }
+    public bool? IsPublic { get; set; }
     public List<string>? CustomTags { get; set; }
     public bool IsFavorite { get; set; }
     public bool IsReadLater { get; set; }
@@ -55,6 +57,7 @@ public class UpdateLinkDto
     public string? CollectionName { get; set; }
     public int? CollectionId { get; set; }
     public string? Notes { get; set; }
+    public bool? IsPublic { get; set; }
     public List<string>? CustomTags { get; set; }
     public bool? IsFavorite { get; set; }
     public bool? IsReadLater { get; set; }

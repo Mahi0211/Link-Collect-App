@@ -15,6 +15,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<LinkItem> Links => Set<LinkItem>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<LinkTag> LinkTags => Set<LinkTag>();
+    public DbSet<FriendRequest> FriendRequests => Set<FriendRequest>();
+    public DbSet<Friendship> Friendships => Set<Friendship>();
+    public DbSet<CollectionRating> CollectionRatings => Set<CollectionRating>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,7 +40,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         {
             entity.HasKey(c => c.Id);
             entity.Property(c => c.Name).IsRequired().HasMaxLength(150);
+            entity.Property(c => c.Description).HasMaxLength(500);
+            entity.Property(c => c.IsPublic).HasDefaultValue(false);
             entity.HasIndex(c => new { c.UserId, c.Name });
+            entity.HasIndex(c => new { c.UserId, c.IsPublic });
 
             entity.HasOne(c => c.User)
                 .WithMany(u => u.Collections)
@@ -52,12 +58,15 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(l => l.Url).IsRequired();
             entity.Property(l => l.Title).HasMaxLength(500);
             entity.Property(l => l.Domain).HasMaxLength(255);
+            entity.Property(l => l.IsPublic).HasDefaultValue(false);
 
             entity.HasIndex(l => l.UserId);
             entity.HasIndex(l => l.CollectionId);
             entity.HasIndex(l => new { l.UserId, l.IsFavorite });
             entity.HasIndex(l => new { l.UserId, l.IsReadLater });
             entity.HasIndex(l => new { l.UserId, l.IsArchived });
+            entity.HasIndex(l => new { l.UserId, l.IsPublic });
+            entity.HasIndex(l => new { l.CollectionId, l.IsPublic });
 
             entity.HasOne(l => l.User)
                 .WithMany(u => u.Links)
@@ -96,6 +105,63 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.HasOne(lt => lt.Tag)
                 .WithMany(t => t.LinkTags)
                 .HasForeignKey(lt => lt.TagId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // FriendRequest
+        modelBuilder.Entity<FriendRequest>(entity =>
+        {
+            entity.HasKey(fr => fr.Id);
+            entity.Property(fr => fr.Status).IsRequired().HasMaxLength(20);
+            entity.HasIndex(fr => new { fr.SenderId, fr.ReceiverId }).IsUnique();
+            entity.HasIndex(fr => new { fr.ReceiverId, fr.Status });
+
+            entity.HasOne(fr => fr.Sender)
+                .WithMany(u => u.SentFriendRequests)
+                .HasForeignKey(fr => fr.SenderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(fr => fr.Receiver)
+                .WithMany(u => u.ReceivedFriendRequests)
+                .HasForeignKey(fr => fr.ReceiverId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Friendship
+        modelBuilder.Entity<Friendship>(entity =>
+        {
+            entity.HasKey(f => f.Id);
+            entity.HasIndex(f => new { f.User1Id, f.User2Id }).IsUnique();
+            entity.HasIndex(f => f.User1Id);
+            entity.HasIndex(f => f.User2Id);
+
+            entity.HasOne(f => f.User1)
+                .WithMany(u => u.FriendshipsAsUser1)
+                .HasForeignKey(f => f.User1Id)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(f => f.User2)
+                .WithMany(u => u.FriendshipsAsUser2)
+                .HasForeignKey(f => f.User2Id)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // CollectionRating
+        modelBuilder.Entity<CollectionRating>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.Review).HasMaxLength(500);
+            entity.HasIndex(r => new { r.CollectionId, r.UserId }).IsUnique();
+            entity.HasIndex(r => r.CollectionId);
+
+            entity.HasOne(r => r.Collection)
+                .WithMany(c => c.Ratings)
+                .HasForeignKey(r => r.CollectionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.User)
+                .WithMany(u => u.CollectionRatings)
+                .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
