@@ -780,6 +780,104 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     setReadLater((prev) => prev.filter((u) => u !== urlToDelete));
   };
 
+  // Visibility toggle for individual links
+  const handleToggleLinkPublic = async (url) => {
+    const targetItem = allLinks.find((l) => l.url === url);
+    if (!targetItem?.id) return;
+    try {
+      const nextPublic = !targetItem.isPublic;
+      const updated = await api.updateLink(targetItem.id, {
+        isPublic: nextPublic
+      });
+      if (updated) {
+        setDbLinks((prev) =>
+          (prev || []).map((l) => (l.id === targetItem.id ? { ...l, isPublic: updated.isPublic } : l))
+        );
+      }
+      showToast(nextPublic ? 'Link is now Public to friends 🌐' : 'Link is now Private 🔒', 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to update visibility', 'error');
+    }
+  };
+
+  // Visibility toggle for collections
+  const handleToggleCollectionPublic = async (col) => {
+    if (!col?.id) return;
+    try {
+      const nextPublic = !col.isPublic;
+      await api.updateCollection(col.id, {
+        collectionName: col.collectionName || col.name,
+        description: col.description,
+        isPublic: nextPublic
+      });
+      setCollections((prev) =>
+        prev.map((c) => (c.id === col.id ? { ...c, isPublic: nextPublic } : c))
+      );
+      showToast(nextPublic ? 'Collection is now Public 🌐' : 'Collection is now Private 🔒', 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to update collection visibility', 'error');
+    }
+  };
+
+  // Friend navigation handlers
+  const handleSelectFriend = async (friend) => {
+    setSelectedFriend(friend);
+    setActiveView('friendProfile');
+    setIsLoadingFriendData(true);
+    try {
+      const cols = await api.getFriendPublicCollections(friend.id);
+      setFriendPublicCollections(cols || []);
+    } catch (err) {
+      showToast(err.message || 'Failed to load friend collections', 'error');
+    } finally {
+      setIsLoadingFriendData(false);
+    }
+  };
+
+  const handleSelectFriendCollection = async (col) => {
+    setActiveFriendCol(col);
+    setActiveView('friendCollection');
+    setIsLoadingFriendData(true);
+    try {
+      const [details, links] = await Promise.all([
+        api.getPublicCollectionDetails(col.id).catch(() => col),
+        api.getPublicCollectionLinks(col.id).catch(() => [])
+      ]);
+      setActiveFriendCol(details || col);
+      setFriendLinks(links || []);
+    } catch (err) {
+      showToast(err.message || 'Failed to load friend collection links', 'error');
+    } finally {
+      setIsLoadingFriendData(false);
+    }
+  };
+
+  const handleRateFriendCollection = async (collectionId, score) => {
+    try {
+      const res = await api.rateCollection(collectionId, score);
+      setActiveFriendCol((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          averageRating: res.averageRating,
+          ratingsCount: res.ratingsCount,
+          userRating: res.score
+        };
+      });
+      setFriendPublicCollections((prev) =>
+        prev.map((c) => (c.id === collectionId ? {
+          ...c,
+          averageRating: res.averageRating,
+          ratingsCount: res.ratingsCount,
+          userRating: res.score
+        } : c))
+      );
+      showToast(`Collection rated ${score}★!`, 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to rate collection', 'error');
+    }
+  };
+
   // Add new collection
   const handleCreateCollection = async (e) => {
     e.preventDefault();
@@ -791,15 +889,23 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     }
 
     try {
-      const createdCol = await api.createCollection(trimmed);
+      const createdCol = await api.createCollection({
+        collectionName: trimmed,
+        description: newCollectionDesc.trim() || undefined,
+        isPublic: isNewCollectionPublic
+      });
       const newCol = createdCol || {
         collectionName: trimmed,
+        description: newCollectionDesc.trim() || '',
+        isPublic: isNewCollectionPublic,
         totalLinks: 0,
         links: [],
       };
       const updated = [...collections, newCol];
       saveCollections(updated);
       setNewCollectionName('');
+      setNewCollectionDesc('');
+      setIsNewCollectionPublic(false);
       setIsAddCollectionModalOpen(false);
       setActiveView('collection');
       setActiveCollectionId(updated.length - 1);
@@ -839,6 +945,23 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
             item.collectionName.trim().toLowerCase() === activeCol.collectionName.trim().toLowerCase();
         });
       }
+    } else if (activeView === 'friendCollection') {
+      list = (friendLinks || []).map((l, index) => ({
+        id: l.id,
+        link: l.url,
+        url: l.url,
+        title: l.title || getPageTitle(l.url),
+        domain: l.domain || getDomainName(l.url),
+        customTags: l.customTags || [],
+        notes: l.notes || '',
+        collectionName: activeFriendCol?.collectionName || 'Friend Collection',
+        isPublic: true,
+        isReadOnly: true,
+        rating: l.rating || 0,
+        review: l.review || '',
+        watched: false,
+        _origIndex: index,
+      }));
     }
 
     // Step 2: Collection Filter (Multi-select in 'All Bookmarks' view)
@@ -1021,8 +1144,20 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         subtitle: `${count} links saved in this collection`,
       };
     }
+    if (activeView === 'friendProfile') {
+      return {
+        title: `${selectedFriend?.name || selectedFriend?.username || 'Friend'}'s Shared Space`,
+        subtitle: `@${selectedFriend?.username || 'friend'} • Public Collections & Resources`,
+      };
+    }
+    if (activeView === 'friendCollection') {
+      return {
+        title: activeFriendCol?.collectionName || 'Friend Collection',
+        subtitle: `Shared by ${selectedFriend?.name || selectedFriend?.username || 'Friend'} • ${friendLinks.length} public links`,
+      };
+    }
     return { title: 'Bookmarks', subtitle: '' };
-  }, [activeView, activeCollectionId, collections, collectionCounts, searchQuery, selectedTag, displayedLinks.length, allLinks.length, favorites.length, readLater.length, archive.length, isLoadingApi]);
+  }, [activeView, activeCollectionId, collections, collectionCounts, searchQuery, selectedTag, displayedLinks.length, allLinks.length, favorites.length, readLater.length, archive.length, isLoadingApi, selectedFriend, activeFriendCol, friendLinks.length]);
 
   // Public shared collection viewer mode
   if (sharedCollectionId) {
@@ -1085,6 +1220,8 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         user={{ username: currentUser?.username || currentUser?.name || 'Lionel Mahi', name: currentUser?.name || currentUser?.username || 'Lionel Mahi', email: currentUser?.email }}
         onShareCollection={handleShareCollection}
         isLoading={isLoadingApi}
+        onOpenFriendsModal={() => setIsFriendsModalOpen(true)}
+        pendingRequestsCount={pendingRequestsCount}
       />
 
       {/* Main Workspace Frame */}
@@ -1146,7 +1283,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
             }}
           >
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <h1
                   style={{
                     fontSize: '24px',
@@ -1159,6 +1296,29 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                 >
                   {viewInfo.title}
                 </h1>
+                {activeView === 'collection' && collections[activeCollectionId] && (
+                  <button
+                    onClick={() => handleToggleCollectionPublic(collections[activeCollectionId])}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 10px',
+                      borderRadius: '6px',
+                      fontSize: '11.5px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      backgroundColor: collections[activeCollectionId].isPublic ? 'rgba(16, 185, 129, 0.15)' : 'rgba(100, 116, 139, 0.15)',
+                      color: collections[activeCollectionId].isPublic ? '#10b981' : colors.textTertiary,
+                      border: `1px solid ${collections[activeCollectionId].isPublic ? 'rgba(16, 185, 129, 0.3)' : colors.border}`,
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Click to toggle Public / Private visibility"
+                  >
+                    {collections[activeCollectionId].isPublic ? <Globe size={12} /> : <Lock size={12} />}
+                    <span>{collections[activeCollectionId].isPublic ? 'Public to Friends' : 'Private'}</span>
+                  </button>
+                )}
                 {selectedTag && (
                   <button
                     onClick={() => setSelectedTag(null)}
@@ -1179,30 +1339,60 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
               <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: colors.textSecondary }}>
                 {viewInfo.subtitle}
               </p>
+              {activeView === 'friendCollection' && activeFriendCol && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const filled = star <= (activeFriendCol.userRating || Math.round(activeFriendCol.averageRating || 0));
+                      return (
+                        <Star
+                          key={star}
+                          size={16}
+                          style={{
+                            cursor: 'pointer',
+                            fill: filled ? '#fbbf24' : 'transparent',
+                            color: filled ? '#fbbf24' : colors.textTertiary,
+                            transition: 'all 0.1s ease',
+                          }}
+                          onClick={() => handleRateFriendCollection(activeFriendCol.id, star)}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: '500' }}>
+                    {activeFriendCol.averageRating
+                      ? `${activeFriendCol.averageRating.toFixed(1)} / 5.0 (${activeFriendCol.ratingsCount} ${activeFriendCol.ratingsCount === 1 ? 'rating' : 'ratings'})`
+                      : 'No ratings yet'}
+                    {activeFriendCol.userRating ? ` • Your rating: ${activeFriendCol.userRating}★` : ' • Click star to rate'}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons: Add to Collection & Filters */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  backgroundColor: colors.accentLight,
-                  color: colors.accent,
-                  border: `1px solid ${colors.borderActive}30`,
-                  fontSize: '12.5px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Plus size={15} />
-                <span>Add to {activeView === 'collection' ? collections[activeCollectionId]?.collectionName : 'Collection'}</span>
-              </button>
+              {activeView !== 'friendProfile' && activeView !== 'friendCollection' && (
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: colors.accentLight,
+                    color: colors.accent,
+                    border: `1px solid ${colors.borderActive}30`,
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Plus size={15} />
+                  <span>Add to {activeView === 'collection' ? collections[activeCollectionId]?.collectionName : 'Collection'}</span>
+                </button>
+              )}
 
               {/* Filter Popover Component */}
               <FilterPopover
@@ -1579,6 +1769,74 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                 </div>
               ))}
             </div>
+          ) : activeView === 'friendProfile' ? (
+            <div>
+              {isLoadingFriendData ? (
+                <div style={{ textAlign: 'center', padding: '60px', color: colors.textSecondary }}>
+                  Loading {selectedFriend?.name || selectedFriend?.username}'s public collections...
+                </div>
+              ) : friendPublicCollections.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '64px 20px', borderRadius: '16px', border: `1px dashed ${colors.border}`, backgroundColor: isDark ? 'rgba(24, 24, 27, 0.4)' : '#fafafa', maxWidth: '480px', margin: '40px auto' }}>
+                  <Folder size={38} style={{ color: colors.textTertiary, margin: '0 auto 12px' }} />
+                  <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', color: colors.text }}>No Public Collections</h3>
+                  <p style={{ margin: 0, fontSize: '13px', color: colors.textSecondary }}>
+                    {selectedFriend?.name || selectedFriend?.username} hasn't shared any public collections yet.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                  {friendPublicCollections.map((col) => (
+                    <div
+                      key={col.id}
+                      onClick={() => handleSelectFriendCollection(col)}
+                      style={{
+                        padding: '20px',
+                        borderRadius: '14px',
+                        backgroundColor: isDark ? colors.bgSecondary : '#ffffff',
+                        border: `1px solid ${colors.border}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.18s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = colors.accent;
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = colors.border;
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Folder size={18} style={{ color: colors.accent }} />
+                          <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: colors.text }}>
+                            {col.collectionName}
+                          </h4>
+                        </div>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.12)', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>
+                          <Globe size={11} /> Public
+                        </span>
+                      </div>
+                      {col.description && (
+                        <p style={{ margin: '0 0 14px 0', fontSize: '13px', color: colors.textSecondary, lineHeight: '1.4' }}>
+                          {col.description}
+                        </p>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${colors.border}`, fontSize: '12px', color: colors.textTertiary }}>
+                        <span>{col.totalLinks || 0} links</span>
+                        {col.averageRating ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#fbbf24', fontWeight: '600' }}>
+                            <Star size={12} style={{ fill: '#fbbf24' }} /> {col.averageRating.toFixed(1)} ({col.ratingsCount})
+                          </span>
+                        ) : (
+                          <span>Unrated</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : displayedLinks.length === 0 ? (
             /* Elegant Empty State */
             <div
@@ -1700,6 +1958,9 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   onInspect={(it) => setDrawerItem(it)}
                   onCopySuccess={() => showToast('Link copied to clipboard!')}
                   onSelectTag={setSelectedTag}
+                  isPublic={item.isPublic}
+                  onTogglePublic={!item.isReadOnly ? () => handleToggleLinkPublic(item.url) : undefined}
+                  isReadOnly={Boolean(item.isReadOnly)}
                 />
               ))}
             </div>
@@ -1741,6 +2002,9 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   onInspect={(it) => setDrawerItem(it)}
                   onCopySuccess={() => showToast('Link copied to clipboard!')}
                   onSelectTag={setSelectedTag}
+                  isPublic={item.isPublic}
+                  onTogglePublic={!item.isReadOnly ? () => handleToggleLinkPublic(item.url) : undefined}
+                  isReadOnly={Boolean(item.isReadOnly)}
                 />
               ))}
             </div>
@@ -1845,25 +2109,74 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
               </h3>
             </div>
             <form onSubmit={handleCreateCollection}>
-              <input
-                type="text"
-                autoFocus
-                placeholder="e.g. Design Inspiration, AI Tools..."
-                value={newCollectionName}
-                onChange={(e) => setNewCollectionName(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
-                  border: `1px solid ${colors.border}`,
-                  color: colors.text,
-                  fontSize: '13.5px',
-                  outline: 'none',
-                  marginBottom: '16px',
-                }}
-              />
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: colors.textSecondary, marginBottom: '6px' }}>
+                  Collection Name *
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="e.g. Design Inspiration, AI Tools..."
+                  value={newCollectionName}
+                  onChange={(e) => setNewCollectionName(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                    border: `1px solid ${colors.border}`,
+                    color: colors.text,
+                    fontSize: '13.5px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: colors.textSecondary, marginBottom: '6px' }}>
+                  Description (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Brief summary of what goes in here..."
+                  value={newCollectionDesc}
+                  onChange={(e) => setNewCollectionDesc(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                    border: `1px solid ${colors.border}`,
+                    color: colors.text,
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '18px', padding: '10px 12px', borderRadius: '8px', backgroundColor: isDark ? colors.bgTertiary : '#f8fafc', border: `1px solid ${colors.border}` }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: colors.text }}>
+                  <input
+                    type="checkbox"
+                    checked={isNewCollectionPublic}
+                    onChange={(e) => setIsNewCollectionPublic(e.target.checked)}
+                    style={{ accentColor: colors.accent, width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {isNewCollectionPublic ? <Globe size={15} style={{ color: '#10b981' }} /> : <Lock size={15} style={{ color: colors.textTertiary }} />}
+                    Public to approved friends
+                  </span>
+                </label>
+                <p style={{ margin: '4px 0 0 24px', fontSize: '11px', color: colors.textTertiary, lineHeight: '1.4' }}>
+                  {isNewCollectionPublic
+                    ? 'Friends can view links in this collection that are also marked as public.'
+                    : 'Private: Only visible to you. Friends cannot see this collection.'}
+                </p>
+              </div>
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
                   type="button"
@@ -1954,6 +2267,18 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
             console.warn(err);
           }
         }}
+      />
+
+      {/* Friends & Social Sharing Modal */}
+      <FriendsModal
+        isOpen={isFriendsModalOpen}
+        onClose={() => setIsFriendsModalOpen(false)}
+        onSelectFriend={(friend) => {
+          setIsFriendsModalOpen(false);
+          handleSelectFriend(friend);
+        }}
+        theme={theme}
+        onToast={showToast}
       />
 
       {/* Toast Notification Container */}
