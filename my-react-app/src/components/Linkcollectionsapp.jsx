@@ -15,7 +15,13 @@ import {
   Tag,
   CheckCircle2,
   Folder,
-  X
+  X,
+  Globe,
+  Lock,
+  Users,
+  User,
+  Star,
+  Share2
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 import { Sidebar } from './Sidebar';
@@ -34,6 +40,7 @@ import { BookmarkletModal } from './BookmarkletModal';
 import { SharedCollectionView } from './SharedCollectionView';
 import { BulkActionBar } from './BulkActionBar';
 import { FilterPopover, INITIAL_FILTERS, countActiveFilters } from './FilterPopover';
+import { FriendsModal } from './FriendsModal';
 import { getDomainName, getPageTitle, detectMediaType } from '../utils/linkUtils';
 import { api } from '../utils/api';
 
@@ -79,9 +86,10 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     const loadApiData = async () => {
       setIsLoadingApi(true);
       try {
-        const [apiCols, apiLinks] = await Promise.all([
+        const [apiCols, apiLinks, apiReqs] = await Promise.all([
           api.getCollections().catch(() => null),
           api.getLinks({ view: 'all' }).catch(() => null),
+          api.getPendingFriendRequests().catch(() => null),
         ]);
 
         if (isMounted) {
@@ -94,6 +102,9 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
             setDbLinks(apiLinks);
           } else {
             setDbLinks([]);
+          }
+          if (apiReqs && Array.isArray(apiReqs)) {
+            setPendingRequestsCount(apiReqs.length);
           }
         }
       } catch (err) {
@@ -269,8 +280,19 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isAddCollectionModalOpen, setIsAddCollectionModalOpen] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
+  const [newCollectionDesc, setNewCollectionDesc] = useState('');
+  const [isNewCollectionPublic, setIsNewCollectionPublic] = useState(false);
   const [drawerItem, setDrawerItem] = useState(null);
   const [toast, setToast] = useState(null);
+
+  // Social & Friendship States
+  const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [selectedFriend, setSelectedFriend] = useState(null);
+  const [friendPublicCollections, setFriendPublicCollections] = useState([]);
+  const [activeFriendCol, setActiveFriendCol] = useState(null);
+  const [friendLinks, setFriendLinks] = useState([]);
+  const [isLoadingFriendData, setIsLoadingFriendData] = useState(false);
 
   // Extended Feature Modals & States
   const [sharedCollectionId, setSharedCollectionId] = useState(() => {
@@ -410,6 +432,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         domain: l.domain || getDomainName(l.url),
         customTags: l.customTags || [],
         notes: l.notes || '',
+        isPublic: Boolean(l.isPublic),
         isFavorite: Boolean(l.isFavorite),
         isReadLater: Boolean(l.isReadLater),
         isArchived: Boolean(l.isArchived),
@@ -443,6 +466,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           domain: getDomainName(url),
           customTags: meta.customTags || [],
           notes: meta.notes || '',
+          isPublic: Boolean(meta.isPublic),
           isFavorite: favorites.includes(url),
           isReadLater: readLater.includes(url),
           isArchived: archive.includes(url),
@@ -594,7 +618,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
 
   // Add Link
   const handleAddLink = async (newLinkData) => {
-    const { url, title, collectionName, customTags, notes, isFavorite, isReadLater } = newLinkData;
+    const { url, title, collectionName, customTags, notes, isPublic, isFavorite, isReadLater } = newLinkData;
 
     try {
       const created = await api.createLink({
@@ -603,6 +627,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         collectionName,
         customTags,
         notes,
+        isPublic,
         isFavorite,
         isReadLater,
       });
@@ -650,6 +675,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     collectionName,
     notes,
     customTags,
+    isPublic,
     isFavorite,
     isReadLater,
     rating,
@@ -667,6 +693,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           collectionName,
           notes,
           customTags,
+          isPublic,
           isFavorite,
           isReadLater,
           rating,
@@ -692,6 +719,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         notes,
         customTags,
         collectionName,
+        isPublic: isPublic !== undefined ? isPublic : (prev[url]?.isPublic || false),
         rating: rating !== undefined ? rating : (prev[url]?.rating || 0),
         review: review !== undefined ? review : (prev[url]?.review || ''),
         watched: watched !== undefined ? watched : (prev[url]?.watched || false),

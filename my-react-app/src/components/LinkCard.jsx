@@ -15,7 +15,9 @@ import {
   Square,
   CheckSquare,
   Activity,
-  AlertTriangle
+  AlertTriangle,
+  Globe,
+  Lock
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 import {
@@ -42,6 +44,9 @@ export const LinkCard = ({
   customTags = [],
   notes = '',
   collectionName = '',
+  isPublic = false,
+  onTogglePublic,
+  isReadOnly = false,
   isSelected = false,
   onToggleSelect,
   onShowQr,
@@ -600,6 +605,53 @@ export const LinkCard = ({
             >
               {preview.badge || domain}
             </span>
+
+            {/* Visibility Pill (Public / Private) */}
+            {!isReadOnly && onTogglePublic ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePublic();
+                }}
+                style={{
+                  padding: '3px 7px',
+                  borderRadius: '6px',
+                  backgroundColor: isPublic ? 'rgba(16, 185, 129, 0.85)' : 'rgba(0, 0, 0, 0.7)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  color: '#ffffff',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  border: isPublic ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+                title={isPublic ? 'Public: Visible to approved friends (Click to make Private)' : 'Private: Only visible to you (Click to share with Friends)'}
+              >
+                {isPublic ? <Globe size={10} /> : <Lock size={10} />}
+                <span>{isPublic ? 'Public' : 'Private'}</span>
+              </button>
+            ) : isPublic ? (
+              <span
+                style={{
+                  padding: '3px 7px',
+                  borderRadius: '6px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                  color: '#ffffff',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                <Globe size={10} />
+                <span>Public</span>
+              </span>
+            ) : null}
           </div>
 
           {/* Quick Action Floating Controls */}

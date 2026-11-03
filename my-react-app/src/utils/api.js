@@ -110,17 +110,23 @@ class ApiClient {
     return await this.request('/collections');
   }
 
-  async createCollection(collectionName) {
+  async createCollection(collectionData) {
+    const payload = typeof collectionData === 'string'
+      ? { collectionName: collectionData, isPublic: false }
+      : collectionData;
     return await this.request('/collections', {
       method: 'POST',
-      body: JSON.stringify({ collectionName }),
+      body: JSON.stringify(payload),
     });
   }
 
-  async updateCollection(id, collectionName) {
+  async updateCollection(id, updateData) {
+    const payload = typeof updateData === 'string'
+      ? { collectionName: updateData }
+      : updateData;
     return await this.request(`/collections/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ collectionName }),
+      body: JSON.stringify(payload),
     });
   }
 
@@ -128,6 +134,71 @@ class ApiClient {
     return await this.request(`/collections/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  // Friends & Social Endpoints
+  async getFriends() {
+    return await this.request('/friends');
+  }
+
+  async getPendingFriendRequests() {
+    return await this.request('/friends/requests');
+  }
+
+  async sendFriendRequest(targetIdentifier) {
+    return await this.request('/friends/requests', {
+      method: 'POST',
+      body: JSON.stringify({ targetIdentifier }),
+    });
+  }
+
+  async acceptFriendRequest(id) {
+    return await this.request(`/friends/requests/${id}/accept`, {
+      method: 'PUT',
+    });
+  }
+
+  async rejectFriendRequest(id) {
+    return await this.request(`/friends/requests/${id}/reject`, {
+      method: 'PUT',
+    });
+  }
+
+  async removeFriend(friendUserId) {
+    return await this.request(`/friends/${friendUserId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async searchUsers(query) {
+    return await this.request(`/friends/search?q=${encodeURIComponent(query)}`);
+  }
+
+  async getFriendPublicCollections(friendId) {
+    return await this.request(`/social/friends/${friendId}/collections`);
+  }
+
+  async getPublicCollectionDetails(collectionId) {
+    return await this.request(`/social/collections/${collectionId}`);
+  }
+
+  async getPublicCollectionLinks(collectionId) {
+    return await this.request(`/social/collections/${collectionId}/links`);
+  }
+
+  async rateCollection(collectionId, score, review = '') {
+    return await this.request(`/social/collections/${collectionId}/rate`, {
+      method: 'POST',
+      body: JSON.stringify({ score, review }),
+    });
+  }
+
+  async getCollectionRatings(collectionId) {
+    return await this.request(`/social/collections/${collectionId}/ratings`);
+  }
+
+  async getFriendsFeed(limit = 30) {
+    return await this.request(`/social/feed?limit=${limit}`);
   }
 
   // Links Endpoints

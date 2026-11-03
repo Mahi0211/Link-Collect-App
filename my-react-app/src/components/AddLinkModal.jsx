@@ -44,6 +44,7 @@ export const AddLinkModal = ({
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [notes, setNotes] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isReadLater, setIsReadLater] = useState(false);
   const [watched, setWatched] = useState(false);
@@ -145,6 +146,7 @@ export const AddLinkModal = ({
       collectionName: selectedCollection,
       customTags: tags,
       notes: notes.trim(),
+      isPublic,
       isFavorite,
       isReadLater,
       watched,
@@ -500,6 +502,17 @@ export const AddLinkModal = ({
               />
               <Flame size={13} style={{ color: colors.rewatch }} />
               <span>Rewatch Worthy</span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12.5px', color: isPublic ? '#10b981' : colors.textSecondary, fontWeight: isPublic ? '600' : 'normal' }}>
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                style={{ accentColor: '#10b981', width: '15px', height: '15px' }}
+              />
+              <Globe size={13} style={{ color: '#10b981' }} />
+              <span>Public (Share with Friends)</span>
             </label>
           </div>
 

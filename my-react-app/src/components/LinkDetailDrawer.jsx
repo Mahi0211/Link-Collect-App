@@ -57,6 +57,7 @@ export const LinkDetailDrawer = ({
   const [tagInput, setTagInput] = useState('');
   const [isFavorite, setIsFavorite] = useState(item.isFavorite || false);
   const [isReadLater, setIsReadLater] = useState(item.isReadLater || false);
+  const [isPublic, setIsPublic] = useState(item.isPublic || false);
   const [copied, setCopied] = useState(false);
 
   // New Rating, Watched & Review States
@@ -112,6 +113,7 @@ export const LinkDetailDrawer = ({
       setTags(item.customTags || []);
       setIsFavorite(item.isFavorite || false);
       setIsReadLater(item.isReadLater || false);
+      setIsPublic(item.isPublic || false);
       setRating(item.rating || 0);
       setReview(item.review || '');
       setWatched(item.watched || false);
@@ -190,6 +192,7 @@ export const LinkDetailDrawer = ({
         collectionName,
         notes,
         customTags: tags,
+        isPublic,
         isFavorite,
         isReadLater,
         rating,
@@ -402,6 +405,30 @@ export const LinkDetailDrawer = ({
               >
                 <Clock size={13} fill={isReadLater ? '#ffffff' : 'none'} />
                 <span>{isReadLater ? 'Reading List' : 'Read Later'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPublic(!isPublic)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: isPublic ? '#10b981' : 'rgba(0, 0, 0, 0.75)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  color: '#ffffff',
+                  border: isPublic ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.2)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                }}
+                title={isPublic ? 'Public: Click to make Private' : 'Private: Click to make Public to friends'}
+              >
+                {isPublic ? <Globe size={13} /> : <Lock size={13} />}
+                <span>{isPublic ? 'Public' : 'Private'}</span>
               </button>
             </div>
           </div>

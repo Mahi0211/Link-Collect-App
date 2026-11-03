@@ -16,7 +16,10 @@ import {
   Flame,
   CheckCircle,
   X,
-  Share2
+  Share2,
+  Users,
+  Globe,
+  Lock
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 
@@ -43,7 +46,9 @@ export const Sidebar = ({
   collectionCounts = {},
   user,
   onShareCollection,
-  isLoading = false
+  isLoading = false,
+  onOpenFriendsModal,
+  pendingRequestsCount = 0
 }) => {
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
@@ -299,6 +304,82 @@ export const Sidebar = ({
             })}
           </div>
 
+          {/* Social & Friends */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: '600',
+                color: colors.textTertiary,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                padding: '0 8px 6px 8px',
+              }}
+            >
+              Social
+            </span>
+
+            <button
+              onClick={() => handleItemSelect(onOpenFriendsModal)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 10px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: colors.textSecondary,
+                fontSize: '13px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                textAlign: 'left',
+                width: '100%',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = isDark ? '#1a1a22' : '#f1f5f9';
+                e.currentTarget.style.color = colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = colors.textSecondary;
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Users size={16} color="#6366f1" />
+                <span>Friends & Sharing</span>
+              </div>
+              {pendingRequestsCount > 0 ? (
+                <span
+                  style={{
+                    fontSize: '10.5px',
+                    padding: '2px 7px',
+                    borderRadius: '10px',
+                    backgroundColor: '#f43f5e',
+                    color: '#ffffff',
+                    fontWeight: '700',
+                  }}
+                >
+                  {pendingRequestsCount}
+                </span>
+              ) : (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    padding: '2px 6px',
+                    borderRadius: '10px',
+                    backgroundColor: isDark ? '#1f1f26' : '#f1f5f9',
+                    color: colors.textTertiary,
+                    fontWeight: '600',
+                  }}
+                >
+                  Connect
+                </span>
+              )}
+            </button>
+          </div>
+
           {/* User Collections */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <div
@@ -415,15 +496,20 @@ export const Sidebar = ({
                         flexShrink: 0,
                       }}
                     />
-                    <span
-                      style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {collection.collectionName}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
+                      <span
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {collection.collectionName}
+                      </span>
+                      {collection.isPublic && (
+                        <Globe size={11} color="#10b981" title="Public (visible to friends)" style={{ flexShrink: 0 }} />
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                     {onShareCollection && collection.id && (
