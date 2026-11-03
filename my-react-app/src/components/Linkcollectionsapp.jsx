@@ -960,6 +960,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         rating: l.rating || 0,
         review: l.review || '',
         watched: false,
+        createdAt: l.createdAt,
         _origIndex: index,
       }));
     }
@@ -1006,12 +1007,14 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
       });
     }
 
-    // Step 6: Status Filter (Unwatched, Favorited)
-    if (filters.unwatchedOnly) {
-      list = list.filter((item) => !item.watched && (!item.watchCount || item.watchCount === 0));
-    }
-    if (filters.favoritedOnly) {
-      list = list.filter((item) => Boolean(item.isFavorite));
+    // Step 6: Status Filter (Unwatched, Favorited) - only for personal views
+    if (activeView !== 'friendCollection' && activeView !== 'friendProfile') {
+      if (filters.unwatchedOnly) {
+        list = list.filter((item) => !item.watched && (!item.watchCount || item.watchCount === 0));
+      }
+      if (filters.favoritedOnly) {
+        list = list.filter((item) => Boolean(item.isFavorite));
+      }
     }
 
     // Step 7: Filter by Tag
@@ -1065,7 +1068,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     }
 
     return sorted;
-  }, [allLinks, activeView, activeCollectionId, collections, selectedTag, searchQuery, sortOption, filters]);
+  }, [allLinks, activeView, activeCollectionId, collections, selectedTag, searchQuery, sortOption, filters, friendLinks, activeFriendCol]);
 
   // Paginated links for Grid and List views
   const paginatedLinks = useMemo(() => {
@@ -1837,6 +1840,21 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                 </div>
               )}
             </div>
+          ) : activeView === 'friendCollection' && isLoadingFriendData ? (
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: colors.textSecondary }}>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  border: `3px solid ${colors.border}`,
+                  borderTopColor: colors.accent,
+                  animation: 'spin 0.8s linear infinite',
+                  margin: '0 auto 16px',
+                }}
+              />
+              Loading {selectedFriend?.name || selectedFriend?.username}'s public links...
+            </div>
           ) : displayedLinks.length === 0 ? (
             /* Elegant Empty State */
             <div
@@ -1866,52 +1884,58 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                 <BookOpen size={24} />
               </div>
               <h3 style={{ margin: '0 0 6px 0', fontSize: '17px', fontWeight: '600', color: colors.text }}>
-                {searchQuery
+                {activeView === 'friendCollection'
+                  ? 'No public links in this collection'
+                  : searchQuery
                   ? 'No matching bookmarks'
                   : activeFilterCount > 0
                   ? 'No bookmarks match your filters'
                   : 'No links saved here yet'}
               </h3>
               <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: colors.textSecondary, lineHeight: '1.5' }}>
-                {searchQuery
+                {activeView === 'friendCollection'
+                  ? `${selectedFriend?.name || selectedFriend?.username || 'Your friend'} has not added any public links to this collection yet.`
+                  : searchQuery
                   ? `Try checking your spelling or search by another keyword or tag.`
                   : activeFilterCount > 0
                   ? `Try adjusting your filter criteria or click below to reset active filters.`
                   : `Start collecting links, articles, and websites to keep your workspace organized.`}
               </p>
-              <button
-                onClick={() => {
-                  if (searchQuery) setSearchQuery('');
-                  else if (activeFilterCount > 0) handleResetFilters();
-                  else setIsAddModalOpen(true);
-                }}
-                style={{
-                  padding: '9px 18px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
-                  color: '#ffffff',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 10px rgba(102, 97, 241, 0.35)',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(102, 97, 241, 0.55)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 10px rgba(102, 97, 241, 0.35)';
-                }}
-              >
-                {searchQuery
-                  ? 'Clear Search'
-                  : activeFilterCount > 0
-                  ? 'Reset All Filters'
-                  : '+ Add First Link'}
-              </button>
+              {activeView !== 'friendCollection' && (
+                <button
+                  onClick={() => {
+                    if (searchQuery) setSearchQuery('');
+                    else if (activeFilterCount > 0) handleResetFilters();
+                    else setIsAddModalOpen(true);
+                  }}
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(102, 97, 241, 0.35)',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(102, 97, 241, 0.55)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 10px rgba(102, 97, 241, 0.35)';
+                  }}
+                >
+                  {searchQuery
+                    ? 'Clear Search'
+                    : activeFilterCount > 0
+                    ? 'Reset All Filters'
+                    : '+ Add First Link'}
+                </button>
+              )}
             </div>
           ) : viewMode === 'kanban' ? (
             /* Kanban Board Mode */
