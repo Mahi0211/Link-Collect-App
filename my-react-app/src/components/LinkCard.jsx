@@ -17,7 +17,8 @@ import {
   Activity,
   AlertTriangle,
   Globe,
-  Lock
+  Lock,
+  BookmarkPlus
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 import {
@@ -47,6 +48,7 @@ export const LinkCard = ({
   isPublic = false,
   onTogglePublic,
   isReadOnly = false,
+  onSaveToMyCollection,
   isSelected = false,
   onToggleSelect,
   onShowQr,
@@ -128,12 +130,12 @@ export const LinkCard = ({
   if (viewMode === 'list') {
     return (
       <div
-        onClick={() => onInspect && onInspect(itemPayload)}
+        onClick={() => !isReadOnly && onInspect && onInspect(itemPayload)}
         className="list-card-container"
         style={{
           backgroundColor: isDark ? colors.cardBg : '#ffffff',
           border: `1px solid ${colors.border}`,
-          cursor: 'pointer',
+          cursor: isReadOnly ? 'default' : 'pointer',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = isDark ? colors.cardHover : '#f8fafc';
@@ -147,7 +149,7 @@ export const LinkCard = ({
         {/* Top/Main Section on Mobile, Left on Desktop */}
         <div className="list-card-left">
           {/* Multi-select Checkbox */}
-          {onToggleSelect && (
+          {!isReadOnly && onToggleSelect && (
             <button
               type="button"
               onClick={(e) => {
@@ -228,64 +230,68 @@ export const LinkCard = ({
             </div>
           </div>
 
-          {/* Mobile-only Top Action Buttons (Heart + Open in new tab) */}
-          <div className="list-card-mobile-top-actions" style={{ display: 'none', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-            <button
-              onClick={handleFavoriteClick}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px',
-                borderRadius: '6px',
-                color: isFavorite ? colors.favorite : colors.textTertiary,
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              title={isFavorite ? 'Remove Favorite' : 'Add to Favorites'}
-            >
-              <Heart size={16} fill={isFavorite ? colors.favorite : 'none'} />
-            </button>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onToggleWatched && !watched) onToggleWatched(url);
-              }}
-              style={{
-                color: colors.textTertiary,
-                padding: '6px',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                textDecoration: 'none',
-              }}
-              title="Open in new tab"
-            >
-              <ExternalLink size={16} />
-            </a>
-          </div>
+          {/* Mobile-only Top Action Buttons */}
+          {!isReadOnly && (
+            <div className="list-card-mobile-top-actions" style={{ display: 'none', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+              <button
+                onClick={handleFavoriteClick}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  borderRadius: '6px',
+                  color: isFavorite ? colors.favorite : colors.textTertiary,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+                title={isFavorite ? 'Remove Favorite' : 'Add to Favorites'}
+              >
+                <Heart size={16} fill={isFavorite ? colors.favorite : 'none'} />
+              </button>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onToggleWatched && !watched) onToggleWatched(url);
+                }}
+                style={{
+                  color: colors.textTertiary,
+                  padding: '6px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  textDecoration: 'none',
+                }}
+                title="Open in new tab"
+              >
+                <ExternalLink size={16} />
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Bottom Section on Mobile, Middle & Right on Desktop */}
         <div className="list-card-meta-row">
           {/* Rating & Status Badges */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            {/* Star Rating */}
-            <div onClick={(e) => e.stopPropagation()}>
-              <StarRating
-                rating={rating}
-                onRate={handleStarRate}
-                size={13}
-                showScore={rating > 0}
-                theme={theme}
-              />
-            </div>
+            {/* Star Rating - only for personal links */}
+            {!isReadOnly && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <StarRating
+                  rating={rating}
+                  onRate={handleStarRate}
+                  size={13}
+                  showScore={rating > 0}
+                  theme={theme}
+                />
+              </div>
+            )}
 
             {/* Rewatch Worthy Flame Badge */}
-            {rewatchWorthy && (
+            {!isReadOnly && rewatchWorthy && (
               <span
                 style={{
                   fontSize: '11px',
@@ -307,7 +313,7 @@ export const LinkCard = ({
             )}
 
             {/* Watched Badge */}
-            {watched && (
+            {!isReadOnly && watched && (
               <span
                 style={{
                   fontSize: '11px',
@@ -346,124 +352,180 @@ export const LinkCard = ({
 
           {/* Action Buttons */}
           <div className="list-card-actions">
-            {/* Watched Quick Toggle */}
-            <button
-              onClick={handleWatchedClick}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px',
-                borderRadius: '6px',
-                color: watched ? colors.watched : colors.textTertiary,
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              title={watched ? 'Mark as Unwatched' : 'Mark as Watched'}
-            >
-              <CheckCircle size={15} />
-            </button>
+            {isReadOnly ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {onSaveToMyCollection && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSaveToMyCollection(itemPayload);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 11px',
+                      borderRadius: '6px',
+                      backgroundColor: colors.accentLight,
+                      color: colors.accent,
+                      border: `1px solid ${colors.borderActive}35`,
+                      fontSize: '11.5px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                    }}
+                    title="Save to My Collection"
+                  >
+                    <BookmarkPlus size={13} />
+                    <span>Save to My Collection</span>
+                  </button>
+                )}
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontSize: '11.5px',
+                    fontWeight: '600',
+                    color: '#ffffff',
+                    textDecoration: 'none',
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
+                    boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
+                  }}
+                  title="Open in new window"
+                >
+                  <span>Visit</span>
+                  <ExternalLink size={12} strokeWidth={2.2} />
+                </a>
+              </div>
+            ) : (
+              <>
+                {/* Watched Quick Toggle */}
+                <button
+                  onClick={handleWatchedClick}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '6px',
+                    borderRadius: '6px',
+                    color: watched ? colors.watched : colors.textTertiary,
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title={watched ? 'Mark as Unwatched' : 'Mark as Watched'}
+                >
+                  <CheckCircle size={15} />
+                </button>
 
-            {/* Desktop Favorite Button */}
-            <button
-              className="list-card-desktop-action"
-              onClick={handleFavoriteClick}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px',
-                borderRadius: '6px',
-                color: isFavorite ? colors.favorite : colors.textTertiary,
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              title={isFavorite ? 'Remove Favorite' : 'Add to Favorites'}
-            >
-              <Heart size={15} fill={isFavorite ? colors.favorite : 'none'} />
-            </button>
+                {/* Desktop Favorite Button */}
+                <button
+                  className="list-card-desktop-action"
+                  onClick={handleFavoriteClick}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '6px',
+                    borderRadius: '6px',
+                    color: isFavorite ? colors.favorite : colors.textTertiary,
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title={isFavorite ? 'Remove Favorite' : 'Add to Favorites'}
+                >
+                  <Heart size={15} fill={isFavorite ? colors.favorite : 'none'} />
+                </button>
 
-            {/* Read Later Button */}
-            <button
-              onClick={handleReadLaterClick}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px',
-                borderRadius: '6px',
-                color: isReadLater ? colors.readLater : colors.textTertiary,
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              title={isReadLater ? 'Mark as Read' : 'Read Later'}
-            >
-              <Clock size={15} fill={isReadLater ? colors.readLater : 'none'} />
-            </button>
+                {/* Read Later Button */}
+                <button
+                  onClick={handleReadLaterClick}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '6px',
+                    borderRadius: '6px',
+                    color: isReadLater ? colors.readLater : colors.textTertiary,
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title={isReadLater ? 'Mark as Read' : 'Read Later'}
+                >
+                  <Clock size={15} fill={isReadLater ? colors.readLater : 'none'} />
+                </button>
 
-            {/* Copy Button */}
-            <button
-              onClick={handleCopy}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px',
-                borderRadius: '6px',
-                color: copied ? colors.success : colors.textTertiary,
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              title="Copy URL"
-            >
-              {copied ? <Check size={15} /> : <Copy size={15} />}
-            </button>
+                {/* Copy Button */}
+                <button
+                  onClick={handleCopy}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '6px',
+                    borderRadius: '6px',
+                    color: copied ? colors.success : colors.textTertiary,
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title="Copy URL"
+                >
+                  {copied ? <Check size={15} /> : <Copy size={15} />}
+                </button>
 
-            {/* QR Code Button */}
-            {onShowQr && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onShowQr(itemPayload);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '6px',
-                  borderRadius: '6px',
-                  color: colors.textTertiary,
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-                title="Scan QR Code"
-              >
-                <QrCode size={15} />
-              </button>
+                {/* QR Code Button */}
+                {onShowQr && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShowQr(itemPayload);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '6px',
+                      borderRadius: '6px',
+                      color: colors.textTertiary,
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                    title="Scan QR Code"
+                  >
+                    <QrCode size={15} />
+                  </button>
+                )}
+
+                {/* Desktop External Link */}
+                <a
+                  className="list-card-desktop-action"
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onToggleWatched && !watched) onToggleWatched(url);
+                  }}
+                  style={{
+                    color: colors.textTertiary,
+                    padding: '6px',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    textDecoration: 'none',
+                  }}
+                  title="Open in new tab"
+                >
+                  <ExternalLink size={15} />
+                </a>
+              </>
             )}
-
-            {/* Desktop External Link */}
-            <a
-              className="list-card-desktop-action"
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onToggleWatched && !watched) onToggleWatched(url);
-              }}
-              style={{
-                color: colors.textTertiary,
-                padding: '6px',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                textDecoration: 'none',
-              }}
-              title="Open in new tab"
-            >
-              <ExternalLink size={15} />
-            </a>
           </div>
         </div>
       </div>
@@ -475,7 +537,7 @@ export const LinkCard = ({
   // ==========================================
   return (
     <div
-      onClick={() => onInspect && onInspect(itemPayload)}
+      onClick={() => !isReadOnly && onInspect && onInspect(itemPayload)}
       style={{
         borderRadius: '14px',
         backgroundColor: isDark ? colors.cardBg : '#ffffff',
@@ -483,7 +545,7 @@ export const LinkCard = ({
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        cursor: 'pointer',
+        cursor: isReadOnly ? 'default' : 'pointer',
         transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         position: 'relative',
         boxShadow: colors.shadowSm,
@@ -557,7 +619,7 @@ export const LinkCard = ({
         >
           {/* Left Pill Group: Checkbox + Domain Pill */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {onToggleSelect && (
+            {!isReadOnly && onToggleSelect && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -654,96 +716,18 @@ export const LinkCard = ({
             ) : null}
           </div>
 
-          {/* Quick Action Floating Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {/* Watched Toggle Button */}
-            <button
-              onClick={handleWatchedClick}
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                backgroundColor: watched ? 'rgba(16, 185, 129, 0.95)' : 'rgba(0, 0, 0, 0.65)',
-                backdropFilter: 'blur(6px)',
-                WebkitBackdropFilter: 'blur(6px)',
-                color: '#ffffff',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'transform 0.15s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-              title={watched ? `Watched (${watchCount}x)` : 'Mark as Watched'}
-            >
-              <CheckCircle size={14} />
-            </button>
-
-            {/* Heart Favorite Toggle */}
-            <button
-              onClick={handleFavoriteClick}
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                backgroundColor: isFavorite ? 'rgba(244, 63, 94, 0.95)' : 'rgba(0, 0, 0, 0.65)',
-                backdropFilter: 'blur(6px)',
-                WebkitBackdropFilter: 'blur(6px)',
-                color: '#ffffff',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'transform 0.15s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-              title={isFavorite ? 'Favorited' : 'Add to Favorites'}
-            >
-              <Heart size={14} fill={isFavorite ? '#ffffff' : 'none'} />
-            </button>
-
-            {/* Read Later Toggle */}
-            <button
-              onClick={handleReadLaterClick}
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                backgroundColor: isReadLater ? 'rgba(2, 132, 199, 0.95)' : 'rgba(0, 0, 0, 0.65)',
-                backdropFilter: 'blur(6px)',
-                WebkitBackdropFilter: 'blur(6px)',
-                color: '#ffffff',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'transform 0.15s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-              title={isReadLater ? 'In Read Later' : 'Read Later'}
-            >
-              <Clock size={14} fill={isReadLater ? '#ffffff' : 'none'} />
-            </button>
-
-            {/* QR Code Button */}
-            {onShowQr && (
+          {/* Quick Action Floating Controls - only for personal links */}
+          {!isReadOnly && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {/* Watched Toggle Button */}
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onShowQr(itemPayload);
-                }}
+                onClick={handleWatchedClick}
                 style={{
                   width: '28px',
                   height: '28px',
                   borderRadius: '8px',
                   border: '1px solid rgba(255, 255, 255, 0.12)',
-                  backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                  backgroundColor: watched ? 'rgba(16, 185, 129, 0.95)' : 'rgba(0, 0, 0, 0.65)',
                   backdropFilter: 'blur(6px)',
                   WebkitBackdropFilter: 'blur(6px)',
                   color: '#ffffff',
@@ -755,12 +739,92 @@ export const LinkCard = ({
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                title="Scan QR Code"
+                title={watched ? `Watched (${watchCount}x)` : 'Mark as Watched'}
               >
-                <QrCode size={14} />
+                <CheckCircle size={14} />
               </button>
-            )}
-          </div>
+
+              {/* Heart Favorite Toggle */}
+              <button
+                onClick={handleFavoriteClick}
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  backgroundColor: isFavorite ? 'rgba(244, 63, 94, 0.95)' : 'rgba(0, 0, 0, 0.65)',
+                  backdropFilter: 'blur(6px)',
+                  WebkitBackdropFilter: 'blur(6px)',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'transform 0.15s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                title={isFavorite ? 'Favorited' : 'Add to Favorites'}
+              >
+                <Heart size={14} fill={isFavorite ? '#ffffff' : 'none'} />
+              </button>
+
+              {/* Read Later Toggle */}
+              <button
+                onClick={handleReadLaterClick}
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  backgroundColor: isReadLater ? 'rgba(2, 132, 199, 0.95)' : 'rgba(0, 0, 0, 0.65)',
+                  backdropFilter: 'blur(6px)',
+                  WebkitBackdropFilter: 'blur(6px)',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'transform 0.15s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                title={isReadLater ? 'In Read Later' : 'Read Later'}
+              >
+                <Clock size={14} fill={isReadLater ? '#ffffff' : 'none'} />
+              </button>
+
+              {/* QR Code Button */}
+              {onShowQr && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShowQr(itemPayload);
+                  }}
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(6px)',
+                    WebkitBackdropFilter: 'blur(6px)',
+                    color: '#ffffff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  title="Scan QR Code"
+                >
+                  <QrCode size={14} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Bottom Banner Status Badges */}
@@ -776,8 +840,8 @@ export const LinkCard = ({
             zIndex: 3,
           }}
         >
-          {/* Rewatch Worthy Flame Badge */}
-          {rewatchWorthy ? (
+          {/* Status Badges - hidden for friend collections */}
+          {!isReadOnly && rewatchWorthy ? (
             <span
               style={{
                 fontSize: '10.5px',
@@ -796,7 +860,7 @@ export const LinkCard = ({
               <Flame size={11} />
               <span>Rewatch Worthy</span>
             </span>
-          ) : watched ? (
+          ) : !isReadOnly && watched ? (
             <span
               style={{
                 fontSize: '10.5px',
@@ -884,16 +948,18 @@ export const LinkCard = ({
               </span>
             </div>
 
-            {/* 5-Star Rating component */}
-            <div onClick={(e) => e.stopPropagation()}>
-              <StarRating
-                rating={rating}
-                onRate={handleStarRate}
-                size={14}
-                showScore={rating > 0}
-                theme={theme}
-              />
-            </div>
+            {/* 5-Star Rating component - only for personal links */}
+            {!isReadOnly && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <StarRating
+                  rating={rating}
+                  onRate={handleStarRate}
+                  size={14}
+                  showScore={rating > 0}
+                  theme={theme}
+                />
+              </div>
+            )}
           </div>
 
           {/* Title */}
@@ -915,7 +981,7 @@ export const LinkCard = ({
           </h3>
 
           {/* Review Snippet if unlocked and reviewed */}
-          {review && (
+          {!isReadOnly && review && (
             <div
               style={{
                 fontSize: '11.5px',
@@ -968,7 +1034,7 @@ export const LinkCard = ({
           </div>
         </div>
 
-        {/* Card Footer: Quick Copy & External Open */}
+        {/* Card Footer: Quick Copy & External Open OR Save to My Collection & Visit for friend */}
         <div
           style={{
             display: 'flex',
@@ -979,64 +1045,123 @@ export const LinkCard = ({
             marginTop: '4px',
           }}
         >
-          {/* Quick Copy Link */}
-          <button
-            onClick={handleCopy}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '11.5px',
-              color: copied ? colors.success : colors.textTertiary,
-              padding: '4px 6px',
-              borderRadius: '6px',
-              transition: 'all 0.15s ease',
-            }}
-            title="Copy URL"
-          >
-            {copied ? <Check size={13} /> : <Copy size={13} />}
-            <span>{copied ? 'Copied!' : 'Copy'}</span>
-          </button>
+          {isReadOnly ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+              {onSaveToMyCollection && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSaveToMyCollection(itemPayload);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontSize: '11.5px',
+                    fontWeight: '600',
+                    color: colors.accent,
+                    backgroundColor: colors.accentLight,
+                    border: `1px solid ${colors.borderActive}35`,
+                    padding: '5px 11px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="Save to My Collection"
+                >
+                  <BookmarkPlus size={13} />
+                  <span>Save to My Collection</span>
+                </button>
+              )}
 
-          {/* External Direct Visit Button */}
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onToggleWatched && !watched) onToggleWatched(url);
-            }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              fontSize: '11.5px',
-              fontWeight: '600',
-              color: '#ffffff',
-              textDecoration: 'none',
-              padding: '5px 10px',
-              borderRadius: '6px',
-              background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
-              boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 97, 241, 0.55)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 97, 241, 0.35)';
-            }}
-            title="Open in new window"
-          >
-            <span>Visit</span>
-            <ExternalLink size={13} strokeWidth={2.2} />
-          </a>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '11.5px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  textDecoration: 'none',
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
+                  boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
+                  transition: 'all 0.15s ease',
+                }}
+                title="Open in new window"
+              >
+                <span>Visit</span>
+                <ExternalLink size={12} strokeWidth={2.2} />
+              </a>
+            </div>
+          ) : (
+            <>
+              {/* Quick Copy Link */}
+              <button
+                onClick={handleCopy}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '11.5px',
+                  color: copied ? colors.success : colors.textTertiary,
+                  padding: '4px 6px',
+                  borderRadius: '6px',
+                  transition: 'all 0.15s ease',
+                }}
+                title="Copy URL"
+              >
+                {copied ? <Check size={13} /> : <Copy size={13} />}
+                <span>{copied ? 'Copied!' : 'Copy'}</span>
+              </button>
+
+              {/* External Direct Visit Button */}
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onToggleWatched && !watched) onToggleWatched(url);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '11.5px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  textDecoration: 'none',
+                  padding: '5px 10px',
+                  borderRadius: '6px',
+                  background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
+                  boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 97, 241, 0.55)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 97, 241, 0.35)';
+                }}
+                title="Open in new window"
+              >
+                <span>Visit</span>
+                <ExternalLink size={13} strokeWidth={2.2} />
+              </a>
+            </>
+          )}
         </div>
       </div>
     </div>

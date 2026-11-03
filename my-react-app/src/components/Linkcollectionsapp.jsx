@@ -41,6 +41,7 @@ import { SharedCollectionView } from './SharedCollectionView';
 import { BulkActionBar } from './BulkActionBar';
 import { FilterPopover, INITIAL_FILTERS, countActiveFilters } from './FilterPopover';
 import { FriendsModal } from './FriendsModal';
+import { SaveToCollectionModal } from './SaveToCollectionModal';
 import { getDomainName, getPageTitle, detectMediaType } from '../utils/linkUtils';
 import { api } from '../utils/api';
 
@@ -293,6 +294,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   const [activeFriendCol, setActiveFriendCol] = useState(null);
   const [friendLinks, setFriendLinks] = useState([]);
   const [isLoadingFriendData, setIsLoadingFriendData] = useState(false);
+  const [saveModalItem, setSaveModalItem] = useState(null);
 
   // Extended Feature Modals & States
   const [sharedCollectionId, setSharedCollectionId] = useState(() => {
@@ -878,6 +880,28 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     }
   };
 
+  // Save friend link to my collection
+  const handleSaveToMyCollection = (item) => {
+    setSaveModalItem(item);
+  };
+
+  const handleExecuteSaveToCollection = async (saveData) => {
+    try {
+      const created = await api.createLink(saveData);
+      if (created) {
+        setDbLinks((prev) => (prev ? [created, ...prev] : [created]));
+        const refreshedCols = await api.getCollections().catch(() => null);
+        if (refreshedCols && Array.isArray(refreshedCols)) {
+          setCollections(refreshedCols);
+        }
+      }
+      showToast(`Saved "${saveData.title}" to your collection!`, 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to save link to collection', 'error');
+      throw err;
+    }
+  };
+
   // Add new collection
   const handleCreateCollection = async (e) => {
     e.preventDefault();
@@ -1278,14 +1302,22 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           <div
             style={{
               display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
+              flexDirection: 'column',
+              gap: '8px',
               marginBottom: '24px',
-              flexWrap: 'wrap',
-              gap: '12px',
             }}
           >
-            <div>
+            {/* Row 1: Collection Name (left) & Public/Private Visibility Chip (aligned to right end) */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <h1
                   style={{
@@ -1299,29 +1331,6 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                 >
                   {viewInfo.title}
                 </h1>
-                {activeView === 'collection' && collections[activeCollectionId] && (
-                  <button
-                    onClick={() => handleToggleCollectionPublic(collections[activeCollectionId])}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      padding: '3px 10px',
-                      borderRadius: '6px',
-                      fontSize: '11.5px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      backgroundColor: collections[activeCollectionId].isPublic ? 'rgba(16, 185, 129, 0.15)' : 'rgba(100, 116, 139, 0.15)',
-                      color: collections[activeCollectionId].isPublic ? '#10b981' : colors.textTertiary,
-                      border: `1px solid ${collections[activeCollectionId].isPublic ? 'rgba(16, 185, 129, 0.3)' : colors.border}`,
-                      transition: 'all 0.15s ease',
-                    }}
-                    title="Click to toggle Public / Private visibility"
-                  >
-                    {collections[activeCollectionId].isPublic ? <Globe size={12} /> : <Lock size={12} />}
-                    <span>{collections[activeCollectionId].isPublic ? 'Public to Friends' : 'Private'}</span>
-                  </button>
-                )}
                 {selectedTag && (
                   <button
                     onClick={() => setSelectedTag(null)}
@@ -1339,79 +1348,110 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   </button>
                 )}
               </div>
-              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: colors.textSecondary }}>
-                {viewInfo.subtitle}
-              </p>
-              {activeView === 'friendCollection' && activeFriendCol && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    {[1, 2, 3, 4, 5].map((star) => {
-                      const filled = star <= (activeFriendCol.userRating || Math.round(activeFriendCol.averageRating || 0));
-                      return (
-                        <Star
-                          key={star}
-                          size={16}
-                          style={{
-                            cursor: 'pointer',
-                            fill: filled ? '#fbbf24' : 'transparent',
-                            color: filled ? '#fbbf24' : colors.textTertiary,
-                            transition: 'all 0.1s ease',
-                          }}
-                          onClick={() => handleRateFriendCollection(activeFriendCol.id, star)}
-                        />
-                      );
-                    })}
-                  </div>
-                  <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: '500' }}>
-                    {activeFriendCol.averageRating
-                      ? `${activeFriendCol.averageRating.toFixed(1)} / 5.0 (${activeFriendCol.ratingsCount} ${activeFriendCol.ratingsCount === 1 ? 'rating' : 'ratings'})`
-                      : 'No ratings yet'}
-                    {activeFriendCol.userRating ? ` • Your rating: ${activeFriendCol.userRating}★` : ' • Click star to rate'}
+
+              {/* Public/Private visibility chip aligned to the right end on the same row as Collection Name */}
+              <div>
+                {activeView === 'collection' && collections[activeCollectionId] && (
+                  <button
+                    onClick={() => handleToggleCollectionPublic(collections[activeCollectionId])}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      backgroundColor: collections[activeCollectionId].isPublic ? 'rgba(16, 185, 129, 0.15)' : 'rgba(100, 116, 139, 0.15)',
+                      color: collections[activeCollectionId].isPublic ? '#10b981' : colors.textTertiary,
+                      border: `1px solid ${collections[activeCollectionId].isPublic ? 'rgba(16, 185, 129, 0.3)' : colors.border}`,
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Click to toggle Public / Private visibility"
+                  >
+                    {collections[activeCollectionId].isPublic ? <Globe size={13} /> : <Lock size={13} />}
+                    <span>{collections[activeCollectionId].isPublic ? 'Public to Friends' : 'Private'}</span>
+                  </button>
+                )}
+                {activeView === 'friendCollection' && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                      color: '#10b981',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                    }}
+                  >
+                    <Globe size={13} />
+                    <span>Public Collection</span>
                   </span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            {/* Action Buttons: Add to Collection & Filters */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              {activeView !== 'friendProfile' && activeView !== 'friendCollection' && (
-                <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: colors.accentLight,
-                    color: colors.accent,
-                    border: `1px solid ${colors.borderActive}30`,
-                    fontSize: '12.5px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <Plus size={15} />
-                  <span>Add to {activeView === 'collection' ? collections[activeCollectionId]?.collectionName : 'Collection'}</span>
-                </button>
-              )}
+            {/* Row 2: Subtitle (left) & Actions (right: Add to Collection, Filters) */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <p style={{ margin: 0, fontSize: '13px', color: colors.textSecondary }}>
+                {viewInfo.subtitle}
+              </p>
 
-              {/* Filter Popover Component */}
-              <FilterPopover
-                filters={filters}
-                onApplyFilters={(newFilters) => {
-                  setFilters(newFilters);
-                  setCurrentPage(1);
-                }}
-                onResetFilters={() => {
-                  setFilters(INITIAL_FILTERS);
-                  setCurrentPage(1);
-                }}
-                collections={collections}
-                isAllView={activeView === 'all'}
-                theme={theme}
-              />
+              {/* Action Buttons: Add to Collection & Filters */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {activeView !== 'friendProfile' && activeView !== 'friendCollection' && (
+                  <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      backgroundColor: colors.accentLight,
+                      color: colors.accent,
+                      border: `1px solid ${colors.borderActive}30`,
+                      fontSize: '12.5px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <Plus size={15} />
+                    <span>Add to {activeView === 'collection' ? collections[activeCollectionId]?.collectionName : 'Collection'}</span>
+                  </button>
+                )}
+
+                {/* Filter Popover Component */}
+                <FilterPopover
+                  filters={filters}
+                  onApplyFilters={(newFilters) => {
+                    setFilters(newFilters);
+                    setCurrentPage(1);
+                  }}
+                  onResetFilters={() => {
+                    setFilters(INITIAL_FILTERS);
+                    setCurrentPage(1);
+                  }}
+                  collections={collections}
+                  isAllView={activeView === 'all'}
+                  theme={theme}
+                />
+              </div>
             </div>
           </div>
 
@@ -1985,6 +2025,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   isPublic={item.isPublic}
                   onTogglePublic={!item.isReadOnly ? () => handleToggleLinkPublic(item.url) : undefined}
                   isReadOnly={Boolean(item.isReadOnly)}
+                  onSaveToMyCollection={handleSaveToMyCollection}
                 />
               ))}
             </div>
@@ -2029,6 +2070,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   isPublic={item.isPublic}
                   onTogglePublic={!item.isReadOnly ? () => handleToggleLinkPublic(item.url) : undefined}
                   isReadOnly={Boolean(item.isReadOnly)}
+                  onSaveToMyCollection={handleSaveToMyCollection}
                 />
               ))}
             </div>
@@ -2303,6 +2345,16 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         }}
         theme={theme}
         onToast={showToast}
+      />
+
+      {/* Save to My Collection Modal */}
+      <SaveToCollectionModal
+        isOpen={Boolean(saveModalItem)}
+        onClose={() => setSaveModalItem(null)}
+        linkItem={saveModalItem}
+        collections={collections}
+        onSave={handleExecuteSaveToCollection}
+        theme={theme}
       />
 
       {/* Toast Notification Container */}
