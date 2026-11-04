@@ -348,6 +348,52 @@ export const LinkCard = ({
                 {collectionName}
               </span>
             )}
+
+            {/* Visibility Chip in List View */}
+            {!isReadOnly && onTogglePublic ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePublic();
+                }}
+                style={{
+                  padding: '2px 7px',
+                  borderRadius: '5px',
+                  backgroundColor: isPublic ? 'rgba(16, 185, 129, 0.15)' : (isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'),
+                  color: isPublic ? '#10b981' : colors.textTertiary,
+                  fontSize: '10.5px',
+                  fontWeight: '600',
+                  border: isPublic ? '1px solid rgba(16, 185, 129, 0.35)' : `1px solid ${colors.border}`,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+                title={isPublic ? 'Public: Visible to approved friends (Click to toggle)' : 'Private: Only visible to you (Click to toggle)'}
+              >
+                {isPublic ? <Globe size={10} /> : <Lock size={10} />}
+                <span>{isPublic ? 'Public' : 'Private'}</span>
+              </button>
+            ) : isPublic ? (
+              <span
+                style={{
+                  padding: '2px 7px',
+                  borderRadius: '5px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                  color: '#10b981',
+                  fontSize: '10.5px',
+                  fontWeight: '600',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                <Globe size={10} />
+                <span>Public</span>
+              </span>
+            ) : null}
           </div>
 
           {/* Action Buttons */}
@@ -667,53 +713,6 @@ export const LinkCard = ({
             >
               {preview.badge || domain}
             </span>
-
-            {/* Visibility Pill (Public / Private) */}
-            {!isReadOnly && onTogglePublic ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTogglePublic();
-                }}
-                style={{
-                  padding: '3px 7px',
-                  borderRadius: '6px',
-                  backgroundColor: isPublic ? 'rgba(16, 185, 129, 0.85)' : 'rgba(0, 0, 0, 0.7)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  color: '#ffffff',
-                  fontSize: '10px',
-                  fontWeight: '600',
-                  border: isPublic ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                }}
-                title={isPublic ? 'Public: Visible to approved friends (Click to make Private)' : 'Private: Only visible to you (Click to share with Friends)'}
-              >
-                {isPublic ? <Globe size={10} /> : <Lock size={10} />}
-                <span>{isPublic ? 'Public' : 'Private'}</span>
-              </button>
-            ) : isPublic ? (
-              <span
-                style={{
-                  padding: '3px 7px',
-                  borderRadius: '6px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.85)',
-                  color: '#ffffff',
-                  fontSize: '10px',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                }}
-              >
-                <Globe size={10} />
-                <span>Public</span>
-              </span>
-            ) : null}
           </div>
 
           {/* Quick Action Floating Controls - only for personal links */}
@@ -1002,35 +1001,91 @@ export const LinkCard = ({
             </div>
           )}
 
-          {/* Collection Name & Notes indicator */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            {collectionName && (
-              <span
-                style={{
-                  fontSize: '10.5px',
-                  fontWeight: '500',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: isDark ? '#1a1a22' : '#f1f5f9',
-                  color: colors.textTertiary,
-                }}
-              >
-                {collectionName}
-              </span>
-            )}
-            {notes && (
-              <span
-                style={{
-                  fontSize: '10.5px',
-                  color: colors.accent,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '2px',
-                }}
-              >
-                • has notes
-              </span>
-            )}
+          {/* Collection Name Row with Public/Private Chip on the same line (right end) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
+              {collectionName && (
+                <span
+                  style={{
+                    fontSize: '10.5px',
+                    fontWeight: '500',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: isDark ? '#1a1a22' : '#f1f5f9',
+                    color: colors.textTertiary,
+                    maxWidth: '180px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={collectionName}
+                >
+                  {collectionName}
+                </span>
+              )}
+              {notes && (
+                <span
+                  style={{
+                    fontSize: '10.5px',
+                    color: colors.accent,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                  }}
+                >
+                  • has notes
+                </span>
+              )}
+            </div>
+
+            {/* Public / Private Chip on the same line as collection name */}
+            <div>
+              {!isReadOnly && onTogglePublic ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTogglePublic();
+                  }}
+                  style={{
+                    padding: '2.5px 8px',
+                    borderRadius: '5px',
+                    backgroundColor: isPublic ? 'rgba(16, 185, 129, 0.15)' : (isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'),
+                    color: isPublic ? '#10b981' : colors.textTertiary,
+                    fontSize: '10.5px',
+                    fontWeight: '600',
+                    border: isPublic ? '1px solid rgba(16, 185, 129, 0.35)' : `1px solid ${colors.border}`,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title={isPublic ? 'Public: Visible to approved friends (Click to make Private)' : 'Private: Only visible to you (Click to make Public)'}
+                >
+                  {isPublic ? <Globe size={11} /> : <Lock size={11} />}
+                  <span>{isPublic ? 'Public' : 'Private'}</span>
+                </button>
+              ) : isPublic ? (
+                <span
+                  style={{
+                    padding: '2.5px 8px',
+                    borderRadius: '5px',
+                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                    color: '#10b981',
+                    fontSize: '10.5px',
+                    fontWeight: '600',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Globe size={11} />
+                  <span>Public</span>
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
 
