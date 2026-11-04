@@ -155,23 +155,29 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
   return (
     <div
       style={{
-        minHeight: '100vh',
-        width: '100%',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         overflowY: 'auto',
+        overflowX: 'hidden',
         backgroundColor: colors.bg,
         background: isDark
           ? 'radial-gradient(ellipse at top, #181824 0%, #09090b 100%)'
           : 'radial-gradient(ellipse at top, #f1f5f9 0%, #ffffff 100%)',
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px 16px',
+        padding: '40px 16px',
         fontFamily: 'var(--font-sans)',
         boxSizing: 'border-box',
+        WebkitOverflowScrolling: 'touch',
+        zIndex: 50,
       }}
     >
       <div
         style={{
+          margin: 'auto 0',
           backgroundColor: isDark ? colors.cardBg : '#ffffff',
           border: `1px solid ${colors.border}`,
           borderRadius: '22px',
