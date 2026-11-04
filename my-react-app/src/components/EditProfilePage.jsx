@@ -182,40 +182,78 @@ export function EditProfilePage({
     }
   };
 
-  // Avatar upload handler (client-side base64 preview & persist)
-  const handleAvatarFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Client-side image compression helper to keep payloads small and responsive
+  const compressImageFile = (file, maxWidth, maxHeight, quality = 0.85) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Failed to read image file'));
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
 
-    if (file.size > 2 * 1024 * 1024) {
-      showFeedback('Photo must be 2MB or less.', 'error');
-      return;
-    }
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.max(1, Math.round(width * ratio));
+            height = Math.max(1, Math.round(height * ratio));
+          }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAvatarUrl(reader.result);
-      showFeedback('Avatar photo updated. Click Save Changes to apply.');
-    };
-    reader.readAsDataURL(file);
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(e.target.result);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(dataUrl);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  // Cover photo upload handler
-  const handleCoverFileChange = (e) => {
+  // Avatar upload handler (client-side compression & base64 preview)
+  const handleAvatarFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 4 * 1024 * 1024) {
-      showFeedback('Cover photo must be 4MB or less.', 'error');
+    if (file.size > 8 * 1024 * 1024) {
+      showFeedback('Photo must be 8MB or less.', 'error');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCoverUrl(reader.result);
+    try {
+      const compressedDataUrl = await compressImageFile(file, 400, 400, 0.85);
+      setAvatarUrl(compressedDataUrl);
+      showFeedback('Avatar photo updated. Click Save Changes to apply.');
+    } catch {
+      showFeedback('Could not process photo. Please choose another image.', 'error');
+    }
+  };
+
+  // Cover photo upload handler (client-side compression & base64 preview)
+  const handleCoverFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      showFeedback('Cover photo must be 10MB or less.', 'error');
+      return;
+    }
+
+    try {
+      const compressedDataUrl = await compressImageFile(file, 1600, 600, 0.85);
+      setCoverUrl(compressedDataUrl);
       showFeedback('Cover banner updated. Click Save Changes to apply.');
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      showFeedback('Could not process cover photo. Please choose another image.', 'error');
+    }
   };
 
   // Remove avatar
@@ -1877,3 +1915,4 @@ export function EditProfilePage({
     </div>
   );
 }
+

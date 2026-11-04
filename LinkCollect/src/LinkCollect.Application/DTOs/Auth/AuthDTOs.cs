@@ -68,12 +68,9 @@ public class UpdateUserProfileDto
     [MaxLength(500)]
     public string? Bio { get; set; }
 
-    [MaxLength(2000)]
     public string? AvatarUrl { get; set; }
 
-    [MaxLength(2000)]
     public string? CoverUrl { get; set; }
 
-    [MaxLength(4000)]
     public string? SocialLinksJson { get; set; }
 }

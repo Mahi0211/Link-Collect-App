@@ -201,6 +201,14 @@ public class DbSeeder
             }
             else
             {
+                // Ensure demo user's standard credentials/identity are intact
+                if (user.Username != "Lionel Mahi" || user.Name != "Lionel Mahi")
+                {
+                    user.Username = "Lionel Mahi";
+                    user.Name = "Lionel Mahi";
+                    await _context.SaveChangesAsync();
+                }
+
                 // Clean up any previously seeded dummy collections so the account is completely fresh
                 var dummyCols = await _context.Collections
                     .Where(c => c.UserId == user.Id && (c.Name == "Web Development" || c.Name == "Design & UI Tools" || c.Name == "Tech News & AI"))
@@ -230,13 +238,14 @@ public class DbSeeder
             ("RoleTitle", "VARCHAR(150) NULL"),
             ("Location", "VARCHAR(150) NULL"),
             ("Bio", "VARCHAR(500) NULL"),
-            ("AvatarUrl", "VARCHAR(2000) NULL"),
-            ("CoverUrl", "VARCHAR(2000) NULL"),
-            ("SocialLinksJson", "VARCHAR(4000) NULL")
+            ("AvatarUrl", "LONGTEXT NULL"),
+            ("CoverUrl", "LONGTEXT NULL"),
+            ("SocialLinksJson", "LONGTEXT NULL")
         };
 
         foreach (var (col, type) in columns)
         {
+            // Try adding column if not exists
             try
             {
                 await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `Users` ADD COLUMN `{col}` {type};");
@@ -250,6 +259,26 @@ public class DbSeeder
                 catch
                 {
                     // Column already exists or schema not modified
+                }
+            }
+
+            // Ensure columns that hold large data (images, JSON) are widened to LONGTEXT
+            if (type.StartsWith("LONGTEXT", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `Users` MODIFY COLUMN `{col}` LONGTEXT NULL;");
+                }
+                catch
+                {
+                    try
+                    {
+                        await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `users` MODIFY COLUMN `{col}` LONGTEXT NULL;");
+                    }
+                    catch
+                    {
+                        // Column modification not needed or unsupported
+                    }
                 }
             }
         }

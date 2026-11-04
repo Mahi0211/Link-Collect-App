@@ -35,9 +35,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(u => u.RoleTitle).HasMaxLength(150);
             entity.Property(u => u.Location).HasMaxLength(150);
             entity.Property(u => u.Bio).HasMaxLength(500);
-            entity.Property(u => u.AvatarUrl).HasMaxLength(2000);
-            entity.Property(u => u.CoverUrl).HasMaxLength(2000);
-            entity.Property(u => u.SocialLinksJson).HasMaxLength(4000);
+            entity.Property(u => u.AvatarUrl).HasColumnType("longtext");
+            entity.Property(u => u.CoverUrl).HasColumnType("longtext");
+            entity.Property(u => u.SocialLinksJson).HasColumnType("longtext");
             entity.Property(u => u.PasswordHash).IsRequired().HasMaxLength(255);
         });
 

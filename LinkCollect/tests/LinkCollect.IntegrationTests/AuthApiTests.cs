@@ -310,6 +310,56 @@ public class AuthApiTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task UpdateProfile_WithBase64ImagesAndAllFields_SucceedsWithout400()
+    {
+        // 1. Register a dedicated test user
+        var uniqueEmail = $"profile_test_{Guid.NewGuid():N}@example.com";
+        var regResponse = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequestDto
+        {
+            Name = "Original Profile User",
+            Email = uniqueEmail,
+            Password = "SecurePassword2026!"
+        });
+        var authData = await regResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
+        Assert.NotNull(authData);
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authData.Token);
+
+        // 2. Prepare payload with base64 images that exceed previous 2000 character limit
+        var largeBase64Avatar = "data:image/jpeg;base64," + new string('A', 50000);
+        var largeBase64Cover = "data:image/jpeg;base64," + new string('B', 80000);
+
+        var customUsername = $"custom_user_{Guid.NewGuid():N}";
+        var updatePayload = new UpdateUserProfileDto
+        {
+            Name = "Updated Profile User",
+            Username = customUsername,
+            RoleTitle = "Senior Lead Architect",
+            Location = "Tokyo, Japan (JST)",
+            Bio = "Exploring frontend architecture, performance tuning, and design systems.",
+            AvatarUrl = largeBase64Avatar,
+            CoverUrl = largeBase64Cover,
+            SocialLinksJson = "{\"github\":\"profileuser\",\"twitter\":\"@profileuser\"}"
+        };
+
+        // Act
+        var updateResponse = await client.PutAsJsonAsync("/api/auth/profile", updatePayload);
+
+        // Assert: Must return 200 OK without 400 Bad Request
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var updatedUser = await updateResponse.Content.ReadFromJsonAsync<UserDto>();
+        Assert.NotNull(updatedUser);
+        Assert.Equal("Updated Profile User", updatedUser.Name);
+        Assert.Equal(customUsername, updatedUser.Username);
+        Assert.Equal("Senior Lead Architect", updatedUser.RoleTitle);
+        Assert.Equal("Tokyo, Japan (JST)", updatedUser.Location);
+        Assert.Equal(largeBase64Avatar, updatedUser.AvatarUrl);
+        Assert.Equal(largeBase64Cover, updatedUser.CoverUrl);
+    }
+
+    [Fact]
     public async Task CheckUsername_ExistingAndAvailable_ReturnsCorrectStatus()
     {
         // 1. Existing username check
