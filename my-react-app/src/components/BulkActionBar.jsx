@@ -33,13 +33,15 @@ export function BulkActionBar({
   const [tagInput, setTagInput] = useState('');
   const barRef = useRef(null);
 
-  if (selectedIds.length === 0) return null;
-
-  const isAllSelected = selectedIds.length === allIds.length && allIds.length > 0;
-  const selectedLinks = links.filter(l => selectedIds.includes(l.id));
+  const safeSelectedIds = Array.isArray(selectedIds) ? selectedIds : [];
+  const safeAllIds = Array.isArray(allIds) ? allIds : [];
+  const safeLinks = Array.isArray(links) ? links : [];
+  const safeCollections = Array.isArray(collections) ? collections : [];
 
   // Global hotkeys (M = Move, T = Tag, Del = Delete, Esc = Cancel)
   useEffect(() => {
+    if (safeSelectedIds.length === 0) return;
+
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
 
@@ -67,10 +69,12 @@ export function BulkActionBar({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showMoveMenu, showTagPrompt, showExportMenu, onClearSelection, onExecuteAction]);
+  }, [safeSelectedIds.length, showMoveMenu, showTagPrompt, showExportMenu, onClearSelection, onExecuteAction]);
 
   // Close menus when clicking outside
   useEffect(() => {
+    if (safeSelectedIds.length === 0) return;
+
     const handleClickOutside = (e) => {
       if (barRef.current && !barRef.current.contains(e.target)) {
         setShowMoveMenu(false);
@@ -80,7 +84,13 @@ export function BulkActionBar({
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [safeSelectedIds.length]);
+
+  // Safe early exit AFTER all hooks are called
+  if (safeSelectedIds.length === 0) return null;
+
+  const isAllSelected = safeSelectedIds.length === safeAllIds.length && safeAllIds.length > 0;
+  const selectedLinks = safeLinks.filter(l => safeSelectedIds.includes(l.id));
 
   const handleMove = (colId) => {
     setShowMoveMenu(false);
@@ -240,7 +250,7 @@ export function BulkActionBar({
                 >
                   (No Collection)
                 </button>
-                {collections.map((c) => (
+                {safeCollections.map((c) => (
                   <button
                     key={c.id || c.name || c.collectionName}
                     type="button"
