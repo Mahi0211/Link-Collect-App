@@ -379,25 +379,58 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   // Bulk Actions Handler
   const handleBulkAction = async ({ action, targetCollectionId, tag }) => {
     if (!selectedLinkIds.length) return;
+    const currentSelectedIds = [...selectedLinkIds];
     setIsBulkExecuting(true);
     try {
+      // Optimistic updates for instant UI responsiveness
+      if (action === 'makePublic') {
+        setDbLinks((prev) => (prev || []).map((l) => currentSelectedIds.includes(l.id) ? { ...l, isPublic: true } : l));
+      } else if (action === 'makePrivate') {
+        setDbLinks((prev) => (prev || []).map((l) => currentSelectedIds.includes(l.id) ? { ...l, isPublic: false } : l));
+      } else if (action === 'delete') {
+        setDbLinks((prev) => (prev || []).filter((l) => !currentSelectedIds.includes(l.id)));
+      } else if (action === 'archive') {
+        setDbLinks((prev) => (prev || []).map((l) => currentSelectedIds.includes(l.id) ? { ...l, isArchived: true } : l));
+      } else if (action === 'favorite') {
+        setDbLinks((prev) => (prev || []).map((l) => currentSelectedIds.includes(l.id) ? { ...l, isFavorite: true } : l));
+      }
+
       const res = await api.executeBulkAction({
-        linkIds: selectedLinkIds,
+        linkIds: currentSelectedIds,
         action,
         targetCollectionId,
         tag
       });
 
-      // Reload fresh links
+      // Reload fresh links from DB
       const freshLinks = await api.getLinks({ view: 'all' });
       if (freshLinks && Array.isArray(freshLinks)) {
         setDbLinks(freshLinks);
       }
 
-      showToast(res.message || 'Bulk operation completed!', 'success');
+      // Refresh collections to update public link counts if visibility or collection changed
+      if (['makePublic', 'makePrivate', 'move', 'delete'].includes(action)) {
+        const refreshedCols = await api.getCollections().catch(() => null);
+        if (refreshedCols && Array.isArray(refreshedCols)) {
+          setCollections(refreshedCols);
+        }
+      }
+
+      const fallbackMsg = action === 'makePublic'
+        ? `Successfully made ${currentSelectedIds.length} link(s) public.`
+        : action === 'makePrivate'
+        ? `Successfully made ${currentSelectedIds.length} link(s) private.`
+        : 'Bulk operation completed!';
+
+      showToast(res?.message || fallbackMsg, 'success');
       setSelectedLinkIds([]);
     } catch (err) {
       showToast(err.message || 'Bulk operation failed.', 'error');
+      // Revert / resync state on error
+      const rollbackLinks = await api.getLinks({ view: 'all' }).catch(() => null);
+      if (rollbackLinks && Array.isArray(rollbackLinks)) {
+        setDbLinks(rollbackLinks);
+      }
     } finally {
       setIsBulkExecuting(false);
     }

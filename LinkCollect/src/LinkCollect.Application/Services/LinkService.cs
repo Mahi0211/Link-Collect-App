@@ -555,17 +555,53 @@ public class LinkService : ILinkService
                 }
                 break;
 
+            case "makepublic":
+            case "public":
+                foreach (var link in links)
+                {
+                    link.IsPublic = true;
+                    link.UpdatedAt = DateTime.UtcNow;
+                    count++;
+                }
+                break;
+
+            case "makeprivate":
+            case "private":
+                foreach (var link in links)
+                {
+                    link.IsPublic = false;
+                    link.UpdatedAt = DateTime.UtcNow;
+                    count++;
+                }
+                break;
+
             default:
                 return new BulkActionResultDto { SuccessCount = 0, FailedCount = links.Count, Message = $"Unknown action '{request.Action}'." };
         }
 
         await _context.SaveChangesAsync(cancellationToken);
 
+        string actionDisplay = action switch
+        {
+            "makepublic" or "public" => $"made {count} link(s) public",
+            "makeprivate" or "private" => $"made {count} link(s) private",
+            "delete" => $"deleted {count} link(s)",
+            "move" => $"moved {count} link(s)",
+            "favorite" => $"added {count} link(s) to favorites",
+            "unfavorite" => $"removed {count} link(s) from favorites",
+            "readlater" => $"added {count} link(s) to read later",
+            "unreadlater" => $"removed {count} link(s) from read later",
+            "archive" => $"archived {count} link(s)",
+            "unarchive" => $"unarchived {count} link(s)",
+            "addtag" => $"tagged {count} link(s)",
+            _ => $"applied '{request.Action}' to {count} link(s)"
+        };
+
         return new BulkActionResultDto
         {
             SuccessCount = count,
             FailedCount = request.LinkIds.Count - count,
-            Message = $"Successfully applied '{request.Action}' to {count} link(s)."
+            Message = $"Successfully {actionDisplay}."
         };
     }
 

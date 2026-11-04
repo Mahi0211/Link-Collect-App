@@ -32,7 +32,7 @@ public class LinkStatusDto
 public class BulkLinkActionDto
 {
     public List<int> LinkIds { get; set; } = new();
-    public string Action { get; set; } = string.Empty; // "delete" | "move" | "archive" | "unarchive" | "favorite" | "unfavorite" | "readLater" | "unreadLater" | "addTag"
+    public string Action { get; set; } = string.Empty; // "delete" | "move" | "archive" | "unarchive" | "favorite" | "unfavorite" | "readLater" | "unreadLater" | "addTag" | "makePublic" | "makePrivate"
     public int? TargetCollectionId { get; set; }
     public string? Tag { get; set; }
 }

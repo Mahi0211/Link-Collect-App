@@ -11,7 +11,9 @@ import {
   Download,
   X,
   Loader2,
-  ChevronDown
+  ChevronDown,
+  Globe,
+  Lock
 } from 'lucide-react';
 import { exportToNetscapeHtml, exportToCsv, triggerFileDownload } from '../utils/bookmarkParser';
 
@@ -107,7 +109,7 @@ export function BulkActionBar({
                     onClick={() => handleMove(c.id)}
                     className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 truncate"
                   >
-                    {c.name}
+                    {c.collectionName || c.name}
                   </button>
                 ))}
               </div>
@@ -157,6 +159,28 @@ export function BulkActionBar({
               </form>
             )}
           </div>
+
+          {/* Make Public */}
+          <button
+            onClick={() => onExecuteAction({ action: 'makePublic' })}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-700 text-slate-200 hover:text-white transition-colors"
+            title="Make Public (Visible to Friends)"
+          >
+            <Globe className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Make Public</span>
+          </button>
+
+          {/* Make Private */}
+          <button
+            onClick={() => onExecuteAction({ action: 'makePrivate' })}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-700 text-slate-200 hover:text-white transition-colors"
+            title="Make Private (Visible only to you)"
+          >
+            <Lock className="w-3.5 h-3.5 text-slate-400" />
+            <span className="hidden sm:inline">Make Private</span>
+          </button>
 
           {/* Favorite */}
           <button
