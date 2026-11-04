@@ -24,22 +24,84 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request, CancellationToken cancellationToken = default)
     {
-        var emailLower = request.Email.Trim().ToLowerInvariant();
-        var usernameLower = request.Username.Trim().ToLowerInvariant();
-
-        var existingUser = await _context.Users
-            .AnyAsync(u => u.Email.ToLower() == emailLower || u.Username.ToLower() == usernameLower, cancellationToken);
-
-        if (existingUser)
+        if (string.IsNullOrWhiteSpace(request.Email))
         {
-            throw new BadRequestException("A user with this email or username already exists.");
+            throw new BadRequestException("Email is required.");
         }
+
+        var emailLower = request.Email.Trim().ToLowerInvariant();
+
+        var emailExists = await _context.Users
+            .AnyAsync(u => u.Email.ToLower() == emailLower, cancellationToken);
+
+        if (emailExists)
+        {
+            throw new BadRequestException("An account with this email address already exists.");
+        }
+
+        // Server-side password complexity verification
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
+        {
+            throw new BadRequestException("Password must be at least 8 characters long.");
+        }
+
+        bool hasLetter = request.Password.Any(char.IsLetter);
+        bool hasDigit = request.Password.Any(char.IsDigit);
+        bool hasSpecial = request.Password.Any(ch => !char.IsLetterOrDigit(ch));
+
+        if (!hasLetter || (!hasDigit && !hasSpecial))
+        {
+            throw new BadRequestException("Password must contain letters and at least one number or special character.");
+        }
+
+        // Derive or validate unique username
+        string resolvedUsername;
+        if (!string.IsNullOrWhiteSpace(request.Username))
+        {
+            resolvedUsername = request.Username.Trim();
+            var usernameLower = resolvedUsername.ToLowerInvariant();
+            var usernameExists = await _context.Users
+                .AnyAsync(u => u.Username.ToLower() == usernameLower, cancellationToken);
+
+            if (usernameExists)
+            {
+                throw new BadRequestException("This username is already taken. Please choose another one.");
+            }
+        }
+        else
+        {
+            var baseName = !string.IsNullOrWhiteSpace(request.Name)
+                ? request.Name.Trim()
+                : emailLower.Split('@')[0];
+
+            var sanitized = new string(baseName.Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray()).ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(sanitized))
+            {
+                sanitized = "user";
+            }
+
+            resolvedUsername = sanitized;
+            int attempt = 0;
+            var rnd = new Random();
+            while (await _context.Users.AnyAsync(u => u.Username.ToLower() == resolvedUsername.ToLower(), cancellationToken))
+            {
+                attempt++;
+                resolvedUsername = $"{sanitized}_{rnd.Next(1000, 9999)}";
+                if (attempt > 10)
+                {
+                    resolvedUsername = $"{sanitized}_{Guid.NewGuid().ToString("N")[..6]}";
+                    break;
+                }
+            }
+        }
+
+        var resolvedName = !string.IsNullOrWhiteSpace(request.Name) ? request.Name.Trim() : resolvedUsername;
 
         var user = new User
         {
             Email = emailLower,
-            Username = request.Username.Trim(),
-            Name = string.IsNullOrWhiteSpace(request.Name) ? request.Username.Trim() : request.Name.Trim(),
+            Username = resolvedUsername,
+            Name = resolvedName,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

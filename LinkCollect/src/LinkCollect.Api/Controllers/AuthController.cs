@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using LinkCollect.Application.Common.Interfaces;
 using LinkCollect.Application.DTOs.Auth;
 
 namespace LinkCollect.Api.Controllers;
 
+[EnableRateLimiting("AuthRateLimit")]
 public class AuthController : BaseApiController
 {
     private readonly IAuthService _authService;

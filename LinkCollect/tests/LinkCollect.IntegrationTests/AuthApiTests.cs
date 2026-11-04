@@ -184,4 +184,66 @@ public class AuthApiTests : IClassFixture<WebApplicationFactory<Program>>
             await client.DeleteAsync($"/api/collections/{createdLink.CollectionId.Value}");
         }
     }
+
+    [Fact]
+    public async Task Register_WithFullNameAndEmail_SucceedsAndGeneratesUsername()
+    {
+        // Arrange: Generate unique test email
+        var randomId = Guid.NewGuid().ToString("N")[..8];
+        var payload = new RegisterRequestDto
+        {
+            Name = "Alex Morgan",
+            Email = $"alex_{randomId}@example.com",
+            Password = "SecurePassword2026!"
+        };
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/auth/register", payload);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var authResponse = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
+        Assert.NotNull(authResponse);
+        Assert.NotEmpty(authResponse.Token);
+        Assert.Equal($"alex_{randomId}@example.com", authResponse.User.Email);
+        Assert.Equal("Alex Morgan", authResponse.User.Name);
+        Assert.StartsWith("alexmorgan", authResponse.User.Username);
+    }
+
+    [Fact]
+    public async Task Register_WithWeakPassword_Returns400BadRequest()
+    {
+        // Arrange
+        var payload = new RegisterRequestDto
+        {
+            Name = "Weak User",
+            Email = $"weak_{Guid.NewGuid():N}@example.com",
+            Password = "weak" // Under 8 chars
+        };
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/auth/register", payload);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Register_WithDuplicateEmail_Returns400BadRequest()
+    {
+        // Arrange: Try to register with already existing seeded email
+        var payload = new RegisterRequestDto
+        {
+            Name = "Duplicate User",
+            Email = "becauseiamkira1986@gmail.com",
+            Password = "ValidPassword2026!"
+        };
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/auth/register", payload);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

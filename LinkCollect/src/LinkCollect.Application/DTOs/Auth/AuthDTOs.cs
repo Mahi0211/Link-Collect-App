@@ -17,14 +17,14 @@ public class RegisterRequestDto
     [EmailAddress]
     public string Email { get; set; } = string.Empty;
 
-    [Required]
-    [MinLength(3)]
-    public string Username { get; set; } = string.Empty;
+    public string? Username { get; set; }
 
+    [Required(ErrorMessage = "Full Name is required.")]
+    [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
 
     [Required]
-    [MinLength(6)]
+    [MinLength(8, ErrorMessage = "Password must be at least 8 characters long.")]
     public string Password { get; set; } = string.Empty;
 }
 
