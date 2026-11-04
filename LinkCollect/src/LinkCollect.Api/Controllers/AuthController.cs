@@ -33,11 +33,30 @@ public class AuthController : BaseApiController
     }
 
     [HttpGet("me")]
+    [HttpGet("profile")]
     [Authorize]
     public async Task<ActionResult<UserDto>> GetMe(CancellationToken cancellationToken)
     {
         var userId = GetUserId();
         var user = await _authService.GetCurrentUserAsync(userId, cancellationToken);
         return Ok(user);
+    }
+
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<ActionResult<UserDto>> UpdateProfile([FromBody] UpdateUserProfileDto request, CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        var updated = await _authService.UpdateUserProfileAsync(userId, request, cancellationToken);
+        return Ok(updated);
+    }
+
+    [HttpGet("check-username")]
+    [AllowAnonymous]
+    public async Task<ActionResult> CheckUsername([FromQuery] string username, CancellationToken cancellationToken)
+    {
+        var userId = TryGetUserId();
+        var isAvailable = await _authService.CheckUsernameAvailabilityAsync(username, userId, cancellationToken);
+        return Ok(new { available = isAvailable, username });
     }
 }

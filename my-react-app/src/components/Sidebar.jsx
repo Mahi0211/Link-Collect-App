@@ -48,7 +48,8 @@ export const Sidebar = ({
   onShareCollection,
   isLoading = false,
   onOpenFriendsModal,
-  pendingRequestsCount = 0
+  pendingRequestsCount = 0,
+  onOpenEditProfile
 }) => {
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
@@ -142,7 +143,11 @@ export const Sidebar = ({
             justifyContent: 'space-between',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div
+            onClick={onOpenEditProfile}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: onOpenEditProfile ? 'pointer' : 'default' }}
+            title={onOpenEditProfile ? 'Edit Profile & Settings' : undefined}
+          >
             <div
               style={{
                 width: '32px',
@@ -276,7 +281,11 @@ export const Sidebar = ({
                     }
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+            onClick={onOpenEditProfile}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: onOpenEditProfile ? 'pointer' : 'default' }}
+            title={onOpenEditProfile ? 'Edit Profile & Settings' : undefined}
+          >
                     <Icon
                       size={16}
                       style={{
@@ -346,7 +355,11 @@ export const Sidebar = ({
                 e.currentTarget.style.color = colors.textSecondary;
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+            onClick={onOpenEditProfile}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: onOpenEditProfile ? 'pointer' : 'default' }}
+            title={onOpenEditProfile ? 'Edit Profile & Settings' : undefined}
+          >
                 <Users size={16} color="#6366f1" />
                 <span>Friends & Sharing</span>
               </div>

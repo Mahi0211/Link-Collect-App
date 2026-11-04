@@ -105,6 +105,42 @@ class ApiClient {
     return await this.request('/auth/me');
   }
 
+  async getProfile() {
+    return await this.request('/auth/profile');
+  }
+
+  async updateProfile(profileData) {
+    const res = await this.request('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+    const raw = localStorage.getItem('linkapp-user');
+    if (raw) {
+      try {
+        const current = JSON.parse(raw);
+        localStorage.setItem(
+          'linkapp-user',
+          JSON.stringify({
+            ...current,
+            name: res?.name || current.name,
+            username: res?.username || current.username,
+            roleTitle: res?.roleTitle,
+            location: res?.location,
+            bio: res?.bio,
+            avatarUrl: res?.avatarUrl,
+            coverUrl: res?.coverUrl,
+            socialLinksJson: res?.socialLinksJson,
+          })
+        );
+      } catch {}
+    }
+    return res;
+  }
+
+  async checkUsername(username) {
+    return await this.request(`/auth/check-username?username=${encodeURIComponent(username)}`);
+  }
+
   // Collections Endpoints
   async getCollections() {
     return await this.request('/collections');

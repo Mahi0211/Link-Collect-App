@@ -246,4 +246,91 @@ public class AuthApiTests : IClassFixture<WebApplicationFactory<Program>>
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetProfile_Authenticated_Returns200AndUserProfile()
+    {
+        // 1. Login as Lionel Mahi
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequestDto
+        {
+            Identifier = "lionelmahi9@gmail.com",
+            Password = "Mahin@99"
+        });
+        var authData = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
+        Assert.NotNull(authData);
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authData.Token);
+
+        // 2. Fetch profile
+        var profileResponse = await client.GetAsync("/api/auth/profile");
+        Assert.Equal(HttpStatusCode.OK, profileResponse.StatusCode);
+
+        var profile = await profileResponse.Content.ReadFromJsonAsync<UserDto>();
+        Assert.NotNull(profile);
+        Assert.Equal("lionelmahi9@gmail.com", profile.Email);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_ValidPayload_UpdatesUserSuccessfully()
+    {
+        // 1. Login as Lionel Mahi
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequestDto
+        {
+            Identifier = "lionelmahi9@gmail.com",
+            Password = "Mahin@99"
+        });
+        var authData = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
+        Assert.NotNull(authData);
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authData.Token);
+
+        // 2. Update profile
+        var updatePayload = new UpdateUserProfileDto
+        {
+            Name = "Alex Kira Morgan",
+            RoleTitle = "Staff Product Designer & Curation Lead",
+            Location = "San Francisco, CA (UTC-7)",
+            Bio = "Curating the web's best design systems, retro apparel, and frontend tools.",
+            AvatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
+            SocialLinksJson = "[{\"platform\":\"x\",\"handle\":\"alexkiradev\",\"url\":\"https://x.com/alexkiradev\"}]"
+        };
+
+        var updateResponse = await client.PutAsJsonAsync("/api/auth/profile", updatePayload);
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var updatedUser = await updateResponse.Content.ReadFromJsonAsync<UserDto>();
+        Assert.NotNull(updatedUser);
+        Assert.Equal("Alex Kira Morgan", updatedUser.Name);
+        Assert.Equal("Staff Product Designer & Curation Lead", updatedUser.RoleTitle);
+        Assert.Equal("San Francisco, CA (UTC-7)", updatedUser.Location);
+        Assert.Equal("Curating the web's best design systems, retro apparel, and frontend tools.", updatedUser.Bio);
+        Assert.NotEmpty(updatedUser.SocialLinksJson ?? "");
+    }
+
+    [Fact]
+    public async Task CheckUsername_ExistingAndAvailable_ReturnsCorrectStatus()
+    {
+        // 1. Existing username check
+        var existingResponse = await _client.GetAsync("/api/auth/check-username?username=becauseiamkira1986");
+        Assert.Equal(HttpStatusCode.OK, existingResponse.StatusCode);
+        var existingResult = await existingResponse.Content.ReadFromJsonAsync<UsernameCheckResult>();
+        Assert.NotNull(existingResult);
+        Assert.False(existingResult.Available);
+
+        // 2. Available unique username check
+        var uniqueUsername = $"unique_user_{Guid.NewGuid():N}";
+        var availableResponse = await _client.GetAsync($"/api/auth/check-username?username={uniqueUsername}");
+        Assert.Equal(HttpStatusCode.OK, availableResponse.StatusCode);
+        var availableResult = await availableResponse.Content.ReadFromJsonAsync<UsernameCheckResult>();
+        Assert.NotNull(availableResult);
+        Assert.True(availableResult.Available);
+    }
+}
+
+public class UsernameCheckResult
+{
+    public bool Available { get; set; }
+    public string Username { get; set; } = string.Empty;
 }

@@ -42,6 +42,7 @@ import { BulkActionBar } from './BulkActionBar';
 import { FilterPopover, INITIAL_FILTERS, countActiveFilters } from './FilterPopover';
 import { FriendsModal } from './FriendsModal';
 import { SaveToCollectionModal } from './SaveToCollectionModal';
+import { EditProfilePage } from './EditProfilePage';
 import { getDomainName, getPageTitle, detectMediaType } from '../utils/linkUtils';
 import { api } from '../utils/api';
 
@@ -69,7 +70,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
   });
 
   // Current logged in user info
-  const currentUser = useMemo(() => {
+  const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('linkapp-user');
       if (saved) return JSON.parse(saved);
@@ -79,7 +80,18 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
       name: data?.name || 'Lionel Mahi',
       email: data?.email || 'lionelmahi9@gmail.com'
     };
-  }, [data]);
+  });
+
+  // Hydrate full user profile on mount
+  useEffect(() => {
+    api.getProfile()
+      .then((profile) => {
+        if (profile) {
+          setCurrentUser((prev) => ({ ...prev, ...profile }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Fetch collections and links from ASP.NET Core API on mount
   useEffect(() => {
@@ -1282,6 +1294,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         isLoading={isLoadingApi}
         onOpenFriendsModal={() => setIsFriendsModalOpen(true)}
         pendingRequestsCount={pendingRequestsCount}
+        onOpenEditProfile={() => setActiveView('editProfile')}
       />
 
       {/* Main Workspace Frame */}
@@ -1317,20 +1330,43 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           onOpenSurpriseMe={() => setIsSurpriseMeOpen(true)}
           onOpenImportExport={() => setIsImportExportOpen(true)}
           onOpenBookmarklet={() => setIsBookmarkletOpen(true)}
+          onOpenEditProfile={() => setActiveView('editProfile')}
         />
 
         {/* Content Canvas */}
-        <main
-          ref={mainContentRef}
-          style={{
-            flex: 1,
-            padding: isMobile ? '16px 14px' : '28px 32px',
-            maxWidth: '1440px',
-            width: '100%',
-            margin: '0 auto',
-            boxSizing: 'border-box',
-          }}
-        >
+        {activeView === 'editProfile' ? (
+          <EditProfilePage
+            user={currentUser}
+            collections={collections}
+            links={allLinks}
+            onUpdateUser={(updated) => {
+              setCurrentUser((prev) => ({ ...prev, ...updated }));
+              showToast('Profile updated successfully!', 'success');
+            }}
+            onBack={() => setActiveView('all')}
+            onOpenCollection={(col) => {
+              const idx = collections.findIndex((c) => c.id === col.id);
+              if (idx !== -1) {
+                setActiveView('collection');
+                setActiveCollectionId(idx);
+              } else {
+                setActiveView('all');
+              }
+            }}
+            theme={theme}
+          />
+        ) : (
+          <main
+            ref={mainContentRef}
+            style={{
+              flex: 1,
+              padding: isMobile ? '16px 14px' : '28px 32px',
+              maxWidth: '1440px',
+              width: '100%',
+              margin: '0 auto',
+              boxSizing: 'border-box',
+            }}
+          >
           {/* View Title Bar */}
           <div
             style={{
@@ -2096,6 +2132,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
             />
           )}
         </main>
+      )}
       </div>
 
       {/* Slide-over Inspector Drawer */}

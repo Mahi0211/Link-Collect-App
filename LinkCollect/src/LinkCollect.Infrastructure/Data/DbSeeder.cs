@@ -30,6 +30,9 @@ public class DbSeeder
             // Ensure database schema is created
             await _context.Database.EnsureCreatedAsync();
 
+            // Ensure any newly added User profile columns exist in an existing database
+            await EnsureSchemaUpdatedAsync();
+
             // Always ensure the clean demo user exists
             await EnsureDemoUserAsync();
 
@@ -217,6 +220,38 @@ public class DbSeeder
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error while ensuring user exists.");
+        }
+    }
+
+    private async Task EnsureSchemaUpdatedAsync()
+    {
+        var columns = new (string Name, string Type)[]
+        {
+            ("RoleTitle", "VARCHAR(150) NULL"),
+            ("Location", "VARCHAR(150) NULL"),
+            ("Bio", "VARCHAR(500) NULL"),
+            ("AvatarUrl", "VARCHAR(2000) NULL"),
+            ("CoverUrl", "VARCHAR(2000) NULL"),
+            ("SocialLinksJson", "VARCHAR(4000) NULL")
+        };
+
+        foreach (var (col, type) in columns)
+        {
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `Users` ADD COLUMN `{col}` {type};");
+            }
+            catch
+            {
+                try
+                {
+                    await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `users` ADD COLUMN `{col}` {type};");
+                }
+                catch
+                {
+                    // Column already exists or schema not modified
+                }
+            }
         }
     }
 }

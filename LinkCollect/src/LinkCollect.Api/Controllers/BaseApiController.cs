@@ -17,4 +17,15 @@ public abstract class BaseApiController : ControllerBase
 
         throw new UnauthorizedAccessException("User is not authenticated or invalid token.");
     }
+
+    protected int? TryGetUserId()
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(idClaim, out var userId))
+        {
+            return userId;
+        }
+
+        return null;
+    }
 }

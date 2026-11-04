@@ -18,7 +18,8 @@ import {
   ArrowUpDown,
   Sparkles,
   Upload,
-  BookmarkPlus
+  BookmarkPlus,
+  UserCog
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 
@@ -39,7 +40,8 @@ export const Header = ({
   onLogout,
   onOpenSurpriseMe,
   onOpenImportExport,
-  onOpenBookmarklet
+  onOpenBookmarklet,
+  onOpenEditProfile
 }) => {
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
@@ -494,6 +496,34 @@ export const Header = ({
                       </p>
                     </div>
                   </div>
+
+                  {onOpenEditProfile && (
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onOpenEditProfile();
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'none',
+                        color: colors.text,
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isDark ? '#272730' : '#f1f5f9')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <UserCog size={14} style={{ color: colors.accent }} />
+                      <span>Edit Profile</span>
+                    </button>
+                  )}
 
                   {onOpenBookmarklet && (
                     <button

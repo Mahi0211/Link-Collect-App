@@ -40,4 +40,40 @@ public class UserDto
     public string Email { get; set; } = string.Empty;
     public string Username { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string? RoleTitle { get; set; }
+    public string? Location { get; set; }
+    public string? Bio { get; set; }
+    public string? AvatarUrl { get; set; }
+    public string? CoverUrl { get; set; }
+    public string? SocialLinksJson { get; set; }
+    public int TotalCollections { get; set; }
+    public int TotalLinks { get; set; }
+}
+
+public class UpdateUserProfileDto
+{
+    [Required(ErrorMessage = "Name is required.")]
+    [MaxLength(150)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(100)]
+    public string? Username { get; set; }
+
+    [MaxLength(150)]
+    public string? RoleTitle { get; set; }
+
+    [MaxLength(150)]
+    public string? Location { get; set; }
+
+    [MaxLength(500)]
+    public string? Bio { get; set; }
+
+    [MaxLength(2000)]
+    public string? AvatarUrl { get; set; }
+
+    [MaxLength(2000)]
+    public string? CoverUrl { get; set; }
+
+    [MaxLength(4000)]
+    public string? SocialLinksJson { get; set; }
 }

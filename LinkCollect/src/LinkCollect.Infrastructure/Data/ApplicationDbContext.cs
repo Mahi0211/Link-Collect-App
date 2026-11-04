@@ -32,6 +32,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(u => u.Email).IsRequired().HasMaxLength(255);
             entity.Property(u => u.Username).IsRequired().HasMaxLength(100);
             entity.Property(u => u.Name).HasMaxLength(150);
+            entity.Property(u => u.RoleTitle).HasMaxLength(150);
+            entity.Property(u => u.Location).HasMaxLength(150);
+            entity.Property(u => u.Bio).HasMaxLength(500);
+            entity.Property(u => u.AvatarUrl).HasMaxLength(2000);
+            entity.Property(u => u.CoverUrl).HasMaxLength(2000);
+            entity.Property(u => u.SocialLinksJson).HasMaxLength(4000);
             entity.Property(u => u.PasswordHash).IsRequired().HasMaxLength(255);
         });
 

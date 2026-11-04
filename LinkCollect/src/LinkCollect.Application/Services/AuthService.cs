@@ -120,7 +120,15 @@ public class AuthService : IAuthService
                 Id = user.Id,
                 Email = user.Email,
                 Username = user.Username,
-                Name = user.Name
+                Name = user.Name,
+                RoleTitle = user.RoleTitle,
+                Location = user.Location,
+                Bio = user.Bio,
+                AvatarUrl = user.AvatarUrl,
+                CoverUrl = user.CoverUrl,
+                SocialLinksJson = user.SocialLinksJson,
+                TotalCollections = 0,
+                TotalLinks = 0
             }
         };
     }
@@ -169,7 +177,15 @@ public class AuthService : IAuthService
                 Id = user.Id,
                 Email = user.Email,
                 Username = user.Username,
-                Name = user.Name
+                Name = user.Name,
+                RoleTitle = user.RoleTitle,
+                Location = user.Location,
+                Bio = user.Bio,
+                AvatarUrl = user.AvatarUrl,
+                CoverUrl = user.CoverUrl,
+                SocialLinksJson = user.SocialLinksJson,
+                TotalCollections = 0,
+                TotalLinks = 0
             }
         };
     }
@@ -184,12 +200,96 @@ public class AuthService : IAuthService
             throw new NotFoundException("User not found.");
         }
 
+        var totalCollections = await _context.Collections.CountAsync(c => c.UserId == userId, cancellationToken);
+        var totalLinks = await _context.Links.CountAsync(l => l.UserId == userId, cancellationToken);
+
         return new UserDto
         {
             Id = user.Id,
             Email = user.Email,
             Username = user.Username,
-            Name = user.Name
+            Name = user.Name,
+            RoleTitle = user.RoleTitle,
+            Location = user.Location,
+            Bio = user.Bio,
+            AvatarUrl = user.AvatarUrl,
+            CoverUrl = user.CoverUrl,
+            SocialLinksJson = user.SocialLinksJson,
+            TotalCollections = totalCollections,
+            TotalLinks = totalLinks
         };
+    }
+
+    public async Task<UserDto> UpdateUserProfileAsync(int userId, UpdateUserProfileDto request, CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        if (user == null)
+        {
+            throw new NotFoundException("User not found.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            throw new BadRequestException("Full Name cannot be empty.");
+        }
+
+        // If username is being changed, check uniqueness against other users
+        if (!string.IsNullOrWhiteSpace(request.Username))
+        {
+            var trimmedUsername = request.Username.Trim();
+            if (!string.Equals(trimmedUsername, user.Username, StringComparison.OrdinalIgnoreCase))
+            {
+                var usernameLower = trimmedUsername.ToLowerInvariant();
+                var isTaken = await _context.Users
+                    .AnyAsync(u => u.Id != userId && u.Username.ToLower() == usernameLower, cancellationToken);
+
+                if (isTaken)
+                {
+                    throw new BadRequestException($"Username '@{trimmedUsername}' is already taken. Please choose another.");
+                }
+                user.Username = trimmedUsername;
+            }
+        }
+
+        user.Name = request.Name.Trim();
+        user.RoleTitle = request.RoleTitle?.Trim();
+        user.Location = request.Location?.Trim();
+        user.Bio = request.Bio?.Trim();
+        user.AvatarUrl = request.AvatarUrl?.Trim();
+        user.CoverUrl = request.CoverUrl?.Trim();
+        user.SocialLinksJson = request.SocialLinksJson?.Trim();
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var totalCollections = await _context.Collections.CountAsync(c => c.UserId == userId, cancellationToken);
+        var totalLinks = await _context.Links.CountAsync(l => l.UserId == userId, cancellationToken);
+
+        return new UserDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            Username = user.Username,
+            Name = user.Name,
+            RoleTitle = user.RoleTitle,
+            Location = user.Location,
+            Bio = user.Bio,
+            AvatarUrl = user.AvatarUrl,
+            CoverUrl = user.CoverUrl,
+            SocialLinksJson = user.SocialLinksJson,
+            TotalCollections = totalCollections,
+            TotalLinks = totalLinks
+        };
+    }
+
+    public async Task<bool> CheckUsernameAvailabilityAsync(string username, int? currentUserId = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(username)) return false;
+        var lower = username.Trim().ToLowerInvariant();
+        var exists = await _context.Users
+            .AnyAsync(u => (!currentUserId.HasValue || u.Id != currentUserId.Value) && u.Username.ToLower() == lower, cancellationToken);
+        return !exists;
     }
 }
