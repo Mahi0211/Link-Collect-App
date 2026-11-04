@@ -167,29 +167,31 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
     <div
       style={{
         minHeight: '100vh',
-        width: '100%',
+        height: '100%',
         overflowY: 'auto',
-        backgroundColor: '#09090b',
-        background: 'radial-gradient(ellipse at 50% 12%, rgba(139, 92, 246, 0.14) 0%, rgba(99, 102, 241, 0.05) 45%, #09090b 80%)',
+        backgroundColor: colors.bg,
+        background: isDark
+          ? 'radial-gradient(ellipse at top, #181824 0%, #09090b 100%)'
+          : 'radial-gradient(ellipse at top, #f1f5f9 0%, #ffffff 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '36px 16px',
+        padding: '24px',
         fontFamily: 'var(--font-sans)',
         boxSizing: 'border-box',
       }}
     >
       <div
         style={{
-          backgroundColor: 'rgba(18, 17, 24, 0.88)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '24px',
+          backgroundColor: isDark ? colors.cardBg : '#ffffff',
+          border: `1px solid ${colors.border}`,
+          borderRadius: '20px',
           padding: '36px 32px',
           width: '100%',
-          maxWidth: '430px',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 35px rgba(139, 92, 246, 0.07)',
+          maxWidth: '420px',
+          boxShadow: isDark
+            ? '0 25px 50px -12px rgba(0, 0, 0, 0.7)'
+            : '0 20px 40px -15px rgba(0, 0, 0, 0.1)',
           animation: 'scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
           boxSizing: 'border-box',
           position: 'relative',
@@ -199,19 +201,19 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div
             style={{
-              width: '50px',
-              height: '50px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+              width: '48px',
+              height: '48px',
+              borderRadius: '14px',
+              background: `linear-gradient(135deg, ${colors.accentFrom || '#6366f1'}, ${colors.accentTo || '#9333ea'})`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#ffffff',
               margin: '0 auto 16px auto',
-              boxShadow: '0 8px 24px rgba(139, 92, 246, 0.35)',
+              boxShadow: `0 8px 20px ${colors.accentLight || 'rgba(99, 102, 241, 0.25)'}`,
             }}
           >
-            <Layers size={26} strokeWidth={2.2} />
+            <Layers size={24} />
           </div>
 
           <h1
@@ -219,17 +221,17 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
               fontSize: '24px',
               fontWeight: '700',
               margin: '0 0 6px 0',
-              letterSpacing: '-0.025em',
+              letterSpacing: '-0.02em',
               fontFamily: 'var(--font-heading)',
-              color: '#ffffff',
+              color: colors.text,
             }}
           >
             {mode === 'create' ? 'Create your account' : 'Welcome to LinkCollect'}
           </h1>
           <p
             style={{
-              fontSize: '13px',
-              color: 'rgba(255, 255, 255, 0.55)',
+              fontSize: '13.5px',
+              color: colors.textSecondary,
               margin: 0,
               lineHeight: '1.4',
             }}
@@ -241,8 +243,8 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
         {/* Segmented Tab Switcher */}
         <div
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
+            backgroundColor: isDark ? colors.bgTertiary : '#f1f5f9',
+            border: `1px solid ${colors.border}`,
             borderRadius: '12px',
             padding: '4px',
             display: 'flex',
@@ -256,15 +258,15 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
             style={{
               flex: 1,
               padding: '9px 12px',
-              borderRadius: '9px',
+              borderRadius: '8px',
               border: 'none',
-              backgroundColor: mode === 'create' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-              color: mode === 'create' ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+              backgroundColor: mode === 'create' ? (isDark ? '#27272a' : '#ffffff') : 'transparent',
+              color: mode === 'create' ? colors.text : colors.textTertiary,
               fontSize: '13px',
               fontWeight: mode === 'create' ? '600' : '500',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
-              boxShadow: mode === 'create' ? '0 2px 8px rgba(0, 0, 0, 0.3)' : 'none',
+              boxShadow: mode === 'create' ? '0 1px 4px rgba(0, 0, 0, 0.15)' : 'none',
             }}
           >
             Create Account
@@ -275,15 +277,15 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
             style={{
               flex: 1,
               padding: '9px 12px',
-              borderRadius: '9px',
+              borderRadius: '8px',
               border: 'none',
-              backgroundColor: mode === 'login' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-              color: mode === 'login' ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+              backgroundColor: mode === 'login' ? (isDark ? '#27272a' : '#ffffff') : 'transparent',
+              color: mode === 'login' ? colors.text : colors.textTertiary,
               fontSize: '13px',
               fontWeight: mode === 'login' ? '600' : '500',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
-              boxShadow: mode === 'login' ? '0 2px 8px rgba(0, 0, 0, 0.3)' : 'none',
+              boxShadow: mode === 'login' ? '0 1px 4px rgba(0, 0, 0, 0.15)' : 'none',
             }}
           >
             Sign In
@@ -310,21 +312,19 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
               gap: '9px',
               padding: '10px 14px',
               borderRadius: '10px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              backgroundColor: 'rgba(255, 255, 255, 0.03)',
-              color: '#ffffff',
+              border: `1px solid ${colors.border}`,
+              backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+              color: colors.text,
               fontSize: '13px',
               fontWeight: '500',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.07)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+              e.currentTarget.style.borderColor = colors.accent;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+              e.currentTarget.style.borderColor = colors.border;
             }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
@@ -347,24 +347,22 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
               gap: '9px',
               padding: '10px 14px',
               borderRadius: '10px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              backgroundColor: 'rgba(255, 255, 255, 0.03)',
-              color: '#ffffff',
+              border: `1px solid ${colors.border}`,
+              backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+              color: colors.text,
               fontSize: '13px',
               fontWeight: '500',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.07)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+              e.currentTarget.style.borderColor = colors.accent;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+              e.currentTarget.style.borderColor = colors.border;
             }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="#ffffff">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill={isDark ? '#ffffff' : '#18181b'}>
               <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
             </svg>
             <span>GitHub</span>
@@ -380,31 +378,31 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
             marginBottom: '20px',
           }}
         >
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+          <div style={{ flex: 1, height: '1px', backgroundColor: colors.border }} />
           <span
             style={{
-              fontSize: '10.5px',
+              fontSize: '11px',
               fontWeight: '600',
               letterSpacing: '0.06em',
-              color: 'rgba(255, 255, 255, 0.4)',
+              color: colors.textTertiary,
               textTransform: 'uppercase',
             }}
           >
             Or continue with email
           </span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+          <div style={{ flex: 1, height: '1px', backgroundColor: colors.border }} />
         </div>
 
         {/* OAuth Notice message if clicked */}
         {oauthNotice && (
           <div
             style={{
-              backgroundColor: 'rgba(139, 92, 246, 0.1)',
+              backgroundColor: isDark ? 'rgba(139, 92, 246, 0.1)' : '#ede9fe',
               border: '1px solid rgba(139, 92, 246, 0.25)',
               borderRadius: '8px',
               padding: '9px 12px',
               fontSize: '12px',
-              color: '#c4b5fd',
+              color: isDark ? '#c4b5fd' : '#6d28d9',
               marginBottom: '16px',
               lineHeight: '1.4',
             }}
@@ -416,7 +414,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
         {/* FORM */}
         <form
           onSubmit={mode === 'create' ? handleRegister : handleLogin}
-          style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
         >
           {/* Full Name Input (Create Mode Only) */}
           {mode === 'create' && (
@@ -425,8 +423,8 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                 style={{
                   display: 'block',
                   fontSize: '12px',
-                  fontWeight: '500',
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontWeight: '600',
+                  color: colors.textSecondary,
                   marginBottom: '6px',
                 }}
               >
@@ -435,7 +433,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <User
                   size={16}
-                  style={{ position: 'absolute', left: '12px', color: 'rgba(255, 255, 255, 0.35)' }}
+                  style={{ position: 'absolute', left: '12px', color: colors.textTertiary }}
                 />
                 <input
                   type="text"
@@ -448,23 +446,23 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                   required
                   style={{
                     width: '100%',
-                    padding: '10.5px 14px 10.5px 38px',
+                    padding: '11px 14px 11px 38px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                    color: '#ffffff',
+                    border: `1px solid ${colors.border}`,
+                    backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                    color: colors.text,
                     fontSize: '13.5px',
                     outline: 'none',
                     transition: 'all 0.15s ease',
                     boxSizing: 'border-box',
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#8b5cf6';
-                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
+                    e.target.style.borderColor = colors.accent;
+                    e.target.style.backgroundColor = isDark ? '#1a1a22' : '#ffffff';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                    e.target.style.borderColor = colors.border;
+                    e.target.style.backgroundColor = isDark ? colors.bgTertiary : '#f8fafc';
                   }}
                   disabled={loading}
                 />
@@ -478,8 +476,8 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
               style={{
                 display: 'block',
                 fontSize: '12px',
-                fontWeight: '500',
-                color: 'rgba(255, 255, 255, 0.7)',
+                fontWeight: '600',
+                color: colors.textSecondary,
                 marginBottom: '6px',
               }}
             >
@@ -488,7 +486,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Mail
                 size={16}
-                style={{ position: 'absolute', left: '12px', color: 'rgba(255, 255, 255, 0.35)' }}
+                style={{ position: 'absolute', left: '12px', color: colors.textTertiary }}
               />
               <input
                 type={mode === 'create' ? 'email' : 'text'}
@@ -501,23 +499,23 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                 required
                 style={{
                   width: '100%',
-                  padding: '10.5px 14px 10.5px 38px',
+                  padding: '11px 14px 11px 38px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                  color: '#ffffff',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                  color: colors.text,
                   fontSize: '13.5px',
                   outline: 'none',
                   transition: 'all 0.15s ease',
                   boxSizing: 'border-box',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#8b5cf6';
-                  e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
+                  e.target.style.borderColor = colors.accent;
+                  e.target.style.backgroundColor = isDark ? '#1a1a22' : '#ffffff';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                  e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                  e.target.style.borderColor = colors.border;
+                  e.target.style.backgroundColor = isDark ? colors.bgTertiary : '#f8fafc';
                 }}
                 disabled={loading}
               />
@@ -530,8 +528,8 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
               style={{
                 display: 'block',
                 fontSize: '12px',
-                fontWeight: '500',
-                color: 'rgba(255, 255, 255, 0.7)',
+                fontWeight: '600',
+                color: colors.textSecondary,
                 marginBottom: '6px',
               }}
             >
@@ -540,7 +538,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Lock
                 size={16}
-                style={{ position: 'absolute', left: '12px', color: 'rgba(255, 255, 255, 0.35)' }}
+                style={{ position: 'absolute', left: '12px', color: colors.textTertiary }}
               />
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -553,23 +551,23 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                 required
                 style={{
                   width: '100%',
-                  padding: '10.5px 40px 10.5px 38px',
+                  padding: '11px 40px 11px 38px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                  color: '#ffffff',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                  color: colors.text,
                   fontSize: '13.5px',
                   outline: 'none',
                   transition: 'all 0.15s ease',
                   boxSizing: 'border-box',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#8b5cf6';
-                  e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
+                  e.target.style.borderColor = colors.accent;
+                  e.target.style.backgroundColor = isDark ? '#1a1a22' : '#ffffff';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                  e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                  e.target.style.borderColor = colors.border;
+                  e.target.style.backgroundColor = isDark ? colors.bgTertiary : '#f8fafc';
                 }}
                 disabled={loading}
               />
@@ -581,7 +579,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                   right: '12px',
                   background: 'none',
                   border: 'none',
-                  color: 'rgba(255, 255, 255, 0.4)',
+                  color: colors.textTertiary,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -606,7 +604,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                           flex: 1,
                           height: '3.5px',
                           borderRadius: '2px',
-                          backgroundColor: isFilled ? strength.color : 'rgba(255, 255, 255, 0.08)',
+                          backgroundColor: isFilled ? strength.color : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'),
                           transition: 'background-color 0.25s ease',
                         }}
                       />
@@ -638,8 +636,8 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                 style={{
                   display: 'block',
                   fontSize: '12px',
-                  fontWeight: '500',
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontWeight: '600',
+                  color: colors.textSecondary,
                   marginBottom: '6px',
                 }}
               >
@@ -648,7 +646,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <ShieldCheck
                   size={16}
-                  style={{ position: 'absolute', left: '12px', color: 'rgba(255, 255, 255, 0.35)' }}
+                  style={{ position: 'absolute', left: '12px', color: colors.textTertiary }}
                 />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -661,23 +659,23 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                   required
                   style={{
                     width: '100%',
-                    padding: '10.5px 40px 10.5px 38px',
+                    padding: '11px 40px 11px 38px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                    color: '#ffffff',
+                    border: `1px solid ${colors.border}`,
+                    backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                    color: colors.text,
                     fontSize: '13.5px',
                     outline: 'none',
                     transition: 'all 0.15s ease',
                     boxSizing: 'border-box',
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#8b5cf6';
-                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
+                    e.target.style.borderColor = colors.accent;
+                    e.target.style.backgroundColor = isDark ? '#1a1a22' : '#ffffff';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                    e.target.style.borderColor = colors.border;
+                    e.target.style.backgroundColor = isDark ? colors.bgTertiary : '#f8fafc';
                   }}
                   disabled={loading}
                 />
@@ -689,7 +687,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                     right: '12px',
                     background: 'none',
                     border: 'none',
-                    color: 'rgba(255, 255, 255, 0.4)',
+                    color: colors.textTertiary,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -721,8 +719,8 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                   width: '18px',
                   height: '18px',
                   borderRadius: '5px',
-                  border: agreeTerms ? '1px solid #8b5cf6' : '1px solid rgba(255, 255, 255, 0.2)',
-                  backgroundColor: agreeTerms ? '#8b5cf6' : 'rgba(255, 255, 255, 0.04)',
+                  border: agreeTerms ? `1px solid ${colors.accent || '#8b5cf6'}` : `1px solid ${colors.border}`,
+                  backgroundColor: agreeTerms ? (colors.accent || '#8b5cf6') : (isDark ? colors.bgTertiary : '#f8fafc'),
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -732,12 +730,12 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
               >
                 {agreeTerms && <Check size={13} color="#ffffff" strokeWidth={3} />}
               </div>
-              <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.65)', lineHeight: '1.4' }}>
+              <span style={{ fontSize: '12px', color: colors.textSecondary, lineHeight: '1.4' }}>
                 I agree to the{' '}
                 <a
                   href="#terms"
                   onClick={(e) => e.preventDefault()}
-                  style={{ color: '#a78bfa', textDecoration: 'underline' }}
+                  style={{ color: colors.accent || '#8b5cf6', textDecoration: 'underline' }}
                 >
                   Terms of Service
                 </a>{' '}
@@ -745,7 +743,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                 <a
                   href="#privacy"
                   onClick={(e) => e.preventDefault()}
-                  style={{ color: '#a78bfa', textDecoration: 'underline' }}
+                  style={{ color: colors.accent || '#8b5cf6', textDecoration: 'underline' }}
                 >
                   Privacy Policy
                 </a>
@@ -757,12 +755,12 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
           {error && (
             <div
               style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
+                backgroundColor: colors.dangerLight,
+                border: `1px solid ${colors.danger}40`,
                 borderRadius: '8px',
                 padding: '10px 14px',
                 fontSize: '12.5px',
-                color: '#fca5a5',
+                color: colors.danger,
                 fontWeight: '500',
               }}
             >
@@ -782,9 +780,9 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
             style={{
               width: '100%',
               padding: '12px',
-              borderRadius: '12px',
+              borderRadius: '10px',
               border: 'none',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              background: `linear-gradient(135deg, ${colors.accentFrom || '#6366f1'}, ${colors.accentTo || '#9333ea'})`,
               color: '#ffffff',
               fontWeight: '600',
               fontSize: '14px',
@@ -801,14 +799,14 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                 !email ||
                 !password ||
                 (mode === 'create' && (!fullName || !agreeTerms || !confirmPassword))
-                  ? 0.55
+                  ? 0.6
                   : 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 8px 24px rgba(99, 102, 241, 0.35)',
-              marginTop: '6px',
+              boxShadow: `0 4px 14px ${colors.accentLight || 'rgba(99, 102, 241, 0.25)'}`,
+              marginTop: '4px',
             }}
           >
             {loading ? (
@@ -823,8 +821,8 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
         </form>
 
         {/* Footer Toggle */}
-        <div style={{ marginTop: '22px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 12px 0', fontSize: '12.5px', color: 'rgba(255, 255, 255, 0.55)' }}>
+        <div style={{ marginTop: '24px', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 12px 0', fontSize: '12.5px', color: colors.textSecondary }}>
             {mode === 'create' ? (
               <>
                 Already have an account?{' '}
@@ -835,7 +833,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                     background: 'none',
                     border: 'none',
                     padding: 0,
-                    color: '#a78bfa',
+                    color: colors.accent || '#8b5cf6',
                     fontWeight: '600',
                     cursor: 'pointer',
                     fontSize: '12.5px',
@@ -854,7 +852,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                     background: 'none',
                     border: 'none',
                     padding: 0,
-                    color: '#a78bfa',
+                    color: colors.accent || '#8b5cf6',
                     fontWeight: '600',
                     cursor: 'pointer',
                     fontSize: '12.5px',
@@ -866,7 +864,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
             )}
           </p>
 
-          <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255, 255, 255, 0.3)' }}>
+          <p style={{ margin: 0, fontSize: '11.5px', color: colors.textTertiary }}>
             LinkCollect • Secured with local session authentication &amp; AES-256
           </p>
         </div>
