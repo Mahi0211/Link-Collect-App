@@ -44,6 +44,7 @@ public class FriendService : IFriendService
                 u.Username,
                 u.Name,
                 u.Email,
+                u.AvatarUrl,
                 PublicCollectionsCount = u.Collections.Count(c => c.IsPublic),
                 PublicLinksCount = u.Links.Count(l => l.IsPublic && !l.IsArchived)
             })
@@ -62,6 +63,7 @@ public class FriendService : IFriendService
                     Username = u.Username,
                     Name = u.Name,
                     Email = u.Email,
+                    AvatarUrl = u.AvatarUrl,
                     FriendsSince = pair.FriendsSince,
                     PublicCollectionsCount = u.PublicCollectionsCount,
                     PublicLinksCount = u.PublicLinksCount
@@ -322,6 +324,7 @@ public class FriendService : IFriendService
                 Username = u.Username,
                 Name = u.Name,
                 Email = u.Email,
+                AvatarUrl = u.AvatarUrl,
                 FriendshipStatus = status,
                 RequestId = reqId
             });

@@ -8,6 +8,7 @@ public class FriendDto
     public string Username { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
     public DateTime FriendsSince { get; set; }
     public int PublicCollectionsCount { get; set; }
     public int PublicLinksCount { get; set; }
@@ -38,6 +39,7 @@ public class UserSearchDto
     public string Username { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
     public string FriendshipStatus { get; set; } = "None"; // "None", "Friends", "PendingSent", "PendingReceived"
     public int? RequestId { get; set; }
 }

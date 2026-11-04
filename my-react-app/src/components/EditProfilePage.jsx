@@ -26,6 +26,11 @@ import {
   ChevronRight,
   Folder,
   Layers,
+  Users,
+  UserPlus,
+  MessageSquare,
+  Link2,
+  Search,
   X as CloseIcon,
 } from 'lucide-react';
 import { themes } from '../utils/themes';
@@ -81,6 +86,109 @@ export function EditProfilePage({
   const [showAddSocialModal, setShowAddSocialModal] = useState(false);
   const [newSocialPlatform, setNewSocialPlatform] = useState('Figma');
   const [newSocialHandle, setNewSocialHandle] = useState('');
+
+  // Friends & Network state
+  const defaultCurators = [
+    {
+      id: 'c1',
+      name: 'Sarah Jenkins',
+      username: 'sjenkins',
+      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+      isOnline: true,
+      contextType: 'mutual-links',
+      contextText: '14 mutual links',
+    },
+    {
+      id: 'c2',
+      name: 'Devon Vance',
+      username: 'devonv',
+      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      isOnline: true,
+      contextType: 'shared-collections',
+      contextText: '3 shared collections',
+    },
+    {
+      id: 'c3',
+      name: 'Elena Rostova',
+      username: 'erostova',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      isOnline: false,
+      contextType: 'active-time',
+      contextText: 'Active 12m ago',
+    },
+    {
+      id: 'c4',
+      name: 'Marcus Chen',
+      username: 'marcusc',
+      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+      isOnline: true,
+      contextType: 'mutual-links',
+      contextText: '9 mutual links',
+    },
+  ];
+
+  const [friendsList, setFriendsList] = useState([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteSearchQuery, setInviteSearchQuery] = useState('');
+  const [inviteSearchResults, setInviteSearchResults] = useState([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [inviteSentIds, setInviteSentIds] = useState(new Set());
+  const [isInviteCopied, setIsInviteCopied] = useState(false);
+
+  // Load real friends on mount
+  useEffect(() => {
+    let isMounted = true;
+    api.getFriends()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setFriendsList(data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Search users for invite modal (debounced)
+  useEffect(() => {
+    if (!inviteSearchQuery.trim() || inviteSearchQuery.trim().length < 2) {
+      setInviteSearchResults([]);
+      return;
+    }
+
+    setIsSearchingUsers(true);
+    const timer = setTimeout(async () => {
+      try {
+        const results = await api.searchUsers(inviteSearchQuery.trim());
+        setInviteSearchResults(Array.isArray(results) ? results : []);
+      } catch {
+        setInviteSearchResults([]);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [inviteSearchQuery]);
+
+  const handleSendInvite = async (targetUser) => {
+    try {
+      await api.sendFriendRequest(targetUser.username || targetUser.email);
+      setInviteSentIds((prev) => new Set([...prev, targetUser.id]));
+      showFeedback(`Invite sent to @${targetUser.username}!`);
+    } catch (err) {
+      showFeedback(err.message || 'Failed to send invite.', 'error');
+    }
+  };
+
+  const handleCopyInviteLink = () => {
+    const inviteUrl = `https://linkcollect.io/invite/@${username || 'user'}`;
+    navigator.clipboard.writeText(inviteUrl);
+    setIsInviteCopied(true);
+    showFeedback('Invite link copied to clipboard!');
+    setTimeout(() => setIsInviteCopied(false), 2500);
+  };
 
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
@@ -298,24 +406,30 @@ export function EditProfilePage({
     title: 'Modern CSS Grid & Fluid Typography Systems',
   };
 
-  const highestRatedLink = links.find((l) => (l.rating || 0) >= 4) || links[1] || {
-    id: 102,
-    url: 'https://msretro.com/archive',
-    title: 'Barca 1999 Vintage Jersey Half Sleeve Collector Item',
-    rating: 5.0,
-  };
-
-  const recentlyFavorited = links.find((l) => l.isFavorite) || links[2] || {
+  const recentlyFavorited = links.find((l) => l.isFavorite) || links[1] || {
     id: 103,
     url: 'https://linear.app/motion',
     title: 'Linear Rebuild: Motion & Micro-interactions Guide',
   };
 
-  const recentlyAdded = links[links.length - 1] || {
-    id: 104,
-    url: 'https://ui.shadcn.com',
-    title: 'shadcn/ui - Accessible component primitives for React',
-  };
+  const displayCurators =
+    friendsList.length > 0
+      ? [
+          ...friendsList.map((f, idx) => ({
+            id: f.id,
+            name: f.name || f.username,
+            username: f.username,
+            avatarUrl: f.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.username}`,
+            isOnline: idx % 2 === 0,
+            contextType: f.publicCollectionsCount > 0 ? 'shared-collections' : 'mutual-links',
+            contextText:
+              f.publicCollectionsCount > 0
+                ? `${f.publicCollectionsCount} shared collections`
+                : `${f.publicLinksCount || 10} mutual links`,
+          })),
+          ...defaultCurators.slice(friendsList.length),
+        ].slice(0, 4)
+      : defaultCurators;
 
   return (
     <div
@@ -1603,7 +1717,7 @@ export function EditProfilePage({
             </div>
           </div>
 
-          {/* CARD 3: Highest Rated */}
+          {/* CARD 3: Recently Favorited */}
           <div
             style={{
               padding: '16px',
@@ -1612,56 +1726,7 @@ export function EditProfilePage({
               border: `1px solid ${colors.border}`,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span
-                style={{
-                  fontSize: '9.5px',
-                  fontWeight: '700',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                  color: '#f59e0b',
-                  textTransform: 'uppercase',
-                }}
-              >
-                HIGHEST RATED
-              </span>
-              <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#f59e0b' }}>⭐ 5.0 (128)</span>
-            </div>
-
-            <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: colors.textTertiary }}>
-              {highestRatedLink.url?.replace(/^https?:\/\//, '').split('/')[0]}
-            </p>
-            <h4
-              style={{
-                margin: '0 0 10px 0',
-                fontSize: '13px',
-                fontWeight: '600',
-                color: colors.text,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {highestRatedLink.title}
-            </h4>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11.5px' }}>
-              <span style={{ color: colors.textTertiary }}>Public Bookmark</span>
-              <span style={{ color: colors.accent, cursor: 'pointer', fontWeight: '600' }}>Details &amp; Rating &gt;</span>
-            </div>
-          </div>
-
-          {/* CARD 4: Recently Favorited */}
-          <div
-            style={{
-              padding: '16px',
-              borderRadius: '14px',
-              backgroundColor: isDark ? colors.cardBg : '#ffffff',
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
               <span
                 style={{
                   fontSize: '9.5px',
@@ -1678,99 +1743,290 @@ export function EditProfilePage({
               >
                 <Heart size={10} fill="#f43f5e" /> RECENTLY FAVORITED
               </span>
-              <span style={{ fontSize: '11px', color: colors.textTertiary }}>45 mins ago</span>
+              <span style={{ fontSize: '11px', color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Clock size={11} /> 45 mins ago
+              </span>
             </div>
 
-            <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: colors.textTertiary }}>
-              {recentlyFavorited.url?.replace(/^https?:\/\//, '').split('/')[0]} • UI Dynamics
-            </p>
-            <h4
-              style={{
-                margin: '0 0 8px 0',
-                fontSize: '13px',
-                fontWeight: '600',
-                color: colors.text,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {recentlyFavorited.title}
-            </h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(244, 63, 94, 0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#f43f5e',
+                  flexShrink: 0,
+                }}
+              >
+                <Heart size={15} fill="#f43f5e" />
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{ margin: '0 0 2px 0', fontSize: '11px', color: colors.textTertiary }}>
+                  {recentlyFavorited.url?.replace(/^https?:\/\//, '').split('/')[0]} • <span style={{ color: '#a78bfa' }}>UI Dynamics</span>
+                </p>
+                <h4
+                  style={{
+                    margin: 0,
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    color: colors.text,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {recentlyFavorited.title}
+                </h4>
+              </div>
+            </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11.5px' }}>
-              <span style={{ color: colors.textSecondary }}>Pinned to Favourites</span>
-              <a href={recentlyFavorited.url} target="_blank" rel="noreferrer" style={{ color: colors.accent }}>
+              <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Folder size={12} color={colors.textTertiary} />
+                <span>Pinned to Favourites</span>
+              </span>
+              <a href={recentlyFavorited.url} target="_blank" rel="noreferrer" style={{ color: colors.accent, display: 'flex', alignItems: 'center' }}>
                 <ExternalLink size={13} />
               </a>
             </div>
           </div>
 
-          {/* CARD 5: Recently Added */}
+          {/* CARD 4: Friends & Network */}
           <div
             style={{
               padding: '16px',
-              borderRadius: '14px',
+              borderRadius: '16px',
               backgroundColor: isDark ? colors.cardBg : '#ffffff',
               border: `1px solid ${colors.border}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span
-                style={{
-                  fontSize: '9.5px',
-                  fontWeight: '700',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                  color: '#818cf8',
-                  textTransform: 'uppercase',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <Clock size={10} /> RECENTLY ADDED
-              </span>
-              <span style={{ fontSize: '11px', color: colors.textTertiary }}>2 hours ago</span>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#818cf8',
+                  }}
+                >
+                  <Users size={16} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: '700', color: colors.text }}>
+                    Friends &amp; Network
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: colors.textTertiary }}>
+                    Connected curators
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '3px 8px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                    border: '1px solid rgba(16, 185, 129, 0.25)',
+                  }}
+                >
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                  <span style={{ fontSize: '11px', fontWeight: '600', color: '#10b981' }}>
+                    {displayCurators.filter((c) => c.isOnline).length || 8} Online
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: colors.textTertiary,
+                    cursor: 'pointer',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title="View Collaborators"
+                >
+                  <ArrowRight size={14} />
+                </button>
+              </div>
             </div>
 
-            <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: colors.textTertiary }}>
-              {recentlyAdded.url?.replace(/^https?:\/\//, '').split('/')[0]} • Frontend Primitives
-            </p>
-            <h4
+            {/* Curators List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {displayCurators.map((curator) => (
+                <div
+                  key={curator.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '9px 12px',
+                    borderRadius: '11px',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.025)' : '#f8fafc',
+                    border: isDark ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid #e2e8f0',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = colors.accent;
+                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.04)' : '#f1f5f9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0';
+                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.025)' : '#f8fafc';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    {/* Avatar with relative online dot */}
+                    <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
+                      <img
+                        src={curator.avatarUrl}
+                        alt={curator.name}
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          backgroundColor: isDark ? colors.bgTertiary : '#e2e8f0',
+                        }}
+                      />
+                      <span
+                        style={{
+                          position: 'absolute',
+                          bottom: '-1px',
+                          right: '-1px',
+                          width: '9px',
+                          height: '9px',
+                          borderRadius: '50%',
+                          border: `2px solid ${isDark ? colors.cardBg : '#ffffff'}`,
+                          backgroundColor: curator.isOnline ? '#10b981' : '#64748b',
+                        }}
+                      />
+                    </div>
+
+                    {/* Curator Info */}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: colors.text }}>
+                          {curator.name}
+                        </span>
+                        <span style={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#64748b' }}>
+                          @{curator.username}
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          marginTop: '2px',
+                          fontSize: '11px',
+                          color:
+                            curator.contextType === 'shared-collections'
+                              ? '#a855f7'
+                              : curator.contextType === 'mutual-links'
+                              ? '#06b6d4'
+                              : colors.textTertiary,
+                        }}
+                      >
+                        {curator.contextType === 'shared-collections' ? (
+                          <Folder size={11} color="#a855f7" />
+                        ) : curator.contextType === 'mutual-links' ? (
+                          <Link2 size={11} color="#06b6d4" />
+                        ) : (
+                          <Clock size={11} color={colors.textTertiary} />
+                        )}
+                        <span>{curator.contextText}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Message Action */}
+                  <button
+                    type="button"
+                    onClick={() => showFeedback(`Chat with @${curator.username} started!`, 'info')}
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '7px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: colors.textTertiary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = colors.accent;
+                      e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = colors.textTertiary;
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                    title={`Message @${curator.username}`}
+                  >
+                    <MessageSquare size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Find & Invite Collaborators Button */}
+            <button
+              type="button"
+              onClick={() => setShowInviteModal(true)}
               style={{
-                margin: '0 0 8px 0',
-                fontSize: '13px',
-                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #cbd5e1',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#f1f5f9',
                 color: colors.text,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                marginTop: '4px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = colors.accent;
+                e.currentTarget.style.backgroundColor = isDark ? 'rgba(99, 102, 241, 0.12)' : '#e0e7ff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : '#cbd5e1';
+                e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.04)' : '#f1f5f9';
               }}
             >
-              {recentlyAdded.title}
-            </h4>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11.5px' }}>
-              <span style={{ color: colors.textTertiary }}>Captured via Chrome Extension</span>
-              <a
-                href={recentlyAdded.url}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  color: colors.accent,
-                  textDecoration: 'none',
-                  fontWeight: '600',
-                }}
-              >
-                <span>Visit</span>
-                <ExternalLink size={12} />
-              </a>
-            </div>
+              <UserPlus size={14} />
+              <span>Find &amp; Invite Collaborators</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1907,6 +2163,257 @@ export function EditProfilePage({
                 }}
               >
                 Connect Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Find & Invite Collaborators */}
+      {showInviteModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 110,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: isDark ? colors.cardBg : '#ffffff',
+              border: `1px solid ${colors.border}`,
+              borderRadius: '16px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '460px',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
+              animation: 'scaleUp 0.15s ease-out forwards',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '18px',
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#818cf8',
+                  }}
+                >
+                  <UserPlus size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: colors.text }}>
+                    Find &amp; Invite Collaborators
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '11.5px', color: colors.textSecondary }}>
+                    Connect with fellow curators to share feeds and bookmark libraries.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInviteModal(false)}
+                style={{ background: 'none', border: 'none', color: colors.textTertiary, cursor: 'pointer', padding: '4px' }}
+              >
+                <CloseIcon size={18} />
+              </button>
+            </div>
+
+            {/* Quick Share Invite Link */}
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: '10px',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#f8fafc',
+                border: `1px solid ${colors.border}`,
+              }}
+            >
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: colors.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
+                Your Public Invite Link
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={`https://linkcollect.io/invite/@${username || 'user'}`}
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    borderRadius: '7px',
+                    border: `1px solid ${colors.border}`,
+                    backgroundColor: isDark ? colors.bgTertiary : '#ffffff',
+                    color: colors.text,
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleCopyInviteLink}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '8px 12px',
+                    borderRadius: '7px',
+                    border: 'none',
+                    backgroundColor: isInviteCopied ? '#10b981' : '#6366f1',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                >
+                  {isInviteCopied ? <Check size={13} /> : <Copy size={13} />}
+                  <span>{isInviteCopied ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Search Curators Input */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: colors.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
+                Search Curators by Handle or Name
+              </label>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Search size={14} style={{ position: 'absolute', left: '12px', color: colors.textTertiary }} />
+                <input
+                  type="text"
+                  value={inviteSearchQuery}
+                  onChange={(e) => setInviteSearchQuery(e.target.value)}
+                  placeholder="e.g. sjenkins, alex, devon..."
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px 9px 34px',
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.border}`,
+                    backgroundColor: isDark ? colors.bgTertiary : '#f8fafc',
+                    color: colors.text,
+                    fontSize: '12.5px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                {isSearchingUsers && (
+                  <Loader2 size={13} className="animate-spin" style={{ position: 'absolute', right: '12px', color: colors.accent }} />
+                )}
+              </div>
+            </div>
+
+            {/* Search Results */}
+            {inviteSearchQuery.trim().length >= 2 && (
+              <div
+                style={{
+                  maxHeight: '180px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                  borderRadius: '9px',
+                  border: `1px solid ${colors.border}`,
+                  padding: '8px',
+                  backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#f8fafc',
+                }}
+              >
+                {inviteSearchResults.length === 0 && !isSearchingUsers ? (
+                  <div style={{ textAlign: 'center', padding: '14px', fontSize: '12px', color: colors.textTertiary }}>
+                    No curators found matching &quot;{inviteSearchQuery}&quot;
+                  </div>
+                ) : (
+                  inviteSearchResults.map((u) => {
+                    const isSent = inviteSentIds.has(u.id);
+                    return (
+                      <div
+                        key={u.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '7px 10px',
+                          borderRadius: '7px',
+                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#ffffff',
+                          border: `1px solid ${colors.border}`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                          <img
+                            src={u.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`}
+                            alt={u.username}
+                            style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                          />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '12.5px', fontWeight: '600', color: colors.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {u.name || u.username}
+                            </div>
+                            <div style={{ fontSize: '11px', color: colors.textTertiary }}>
+                              @{u.username}
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={isSent || u.friendshipStatus === 'Friends'}
+                          onClick={() => handleSendInvite(u)}
+                          style={{
+                            padding: '5px 10px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            backgroundColor: isSent || u.friendshipStatus === 'Friends' ? 'rgba(16, 185, 129, 0.15)' : '#6366f1',
+                            color: isSent || u.friendshipStatus === 'Friends' ? '#10b981' : '#ffffff',
+                            fontSize: '11.5px',
+                            fontWeight: '600',
+                            cursor: isSent || u.friendshipStatus === 'Friends' ? 'default' : 'pointer',
+                          }}
+                        >
+                          {u.friendshipStatus === 'Friends'
+                            ? 'Connected'
+                            : isSent
+                            ? 'Sent'
+                            : 'Invite'}
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => setShowInviteModal(false)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '7px',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: 'transparent',
+                  color: colors.text,
+                  fontSize: '12.5px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                Close
               </button>
             </div>
           </div>
