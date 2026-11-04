@@ -692,7 +692,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
 
         {/* Footer Toggle */}
         <div style={{ marginTop: '22px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 10px 0', fontSize: '12.5px', color: colors.textSecondary }}>
+          <p style={{ margin: 0, fontSize: '12.5px', color: colors.textSecondary }}>
             {mode === 'create' ? (
               <>
                 Already have an account?{' '}
@@ -732,10 +732,6 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
                 </button>
               </>
             )}
-          </p>
-
-          <p style={{ margin: 0, fontSize: '11px', color: colors.textTertiary }}>
-            LinkCollect • Secured with local session authentication &amp; AES-256
           </p>
         </div>
       </div>
