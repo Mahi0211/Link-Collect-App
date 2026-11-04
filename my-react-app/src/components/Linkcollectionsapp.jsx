@@ -1302,22 +1302,14 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
               marginBottom: '24px',
+              flexWrap: 'wrap',
+              gap: '12px',
             }}
           >
-            {/* Row 1: Collection Name (left) & Public/Private Visibility Chip (aligned to right end) */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                flexWrap: 'wrap',
-                gap: '12px',
-              }}
-            >
+            <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <h1
                   style={{
@@ -1331,6 +1323,48 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                 >
                   {viewInfo.title}
                 </h1>
+                {activeView === 'collection' && collections[activeCollectionId] && (
+                  <button
+                    onClick={() => handleToggleCollectionPublic(collections[activeCollectionId])}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 10px',
+                      borderRadius: '6px',
+                      fontSize: '11.5px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      backgroundColor: collections[activeCollectionId].isPublic ? 'rgba(16, 185, 129, 0.15)' : 'rgba(100, 116, 139, 0.15)',
+                      color: collections[activeCollectionId].isPublic ? '#10b981' : colors.textTertiary,
+                      border: `1px solid ${collections[activeCollectionId].isPublic ? 'rgba(16, 185, 129, 0.3)' : colors.border}`,
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Click to toggle Public / Private visibility"
+                  >
+                    {collections[activeCollectionId].isPublic ? <Globe size={12} /> : <Lock size={12} />}
+                    <span>{collections[activeCollectionId].isPublic ? 'Public to Friends' : 'Private'}</span>
+                  </button>
+                )}
+                {activeView === 'friendCollection' && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 10px',
+                      borderRadius: '6px',
+                      fontSize: '11.5px',
+                      fontWeight: '600',
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                      color: '#10b981',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                    }}
+                  >
+                    <Globe size={12} />
+                    <span>Public</span>
+                  </span>
+                )}
                 {selectedTag && (
                   <button
                     onClick={() => setSelectedTag(null)}
@@ -1348,110 +1382,51 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   </button>
                 )}
               </div>
-
-              {/* Public/Private visibility chip aligned to the right end on the same row as Collection Name */}
-              <div>
-                {activeView === 'collection' && collections[activeCollectionId] && (
-                  <button
-                    onClick={() => handleToggleCollectionPublic(collections[activeCollectionId])}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      padding: '5px 12px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      backgroundColor: collections[activeCollectionId].isPublic ? 'rgba(16, 185, 129, 0.15)' : 'rgba(100, 116, 139, 0.15)',
-                      color: collections[activeCollectionId].isPublic ? '#10b981' : colors.textTertiary,
-                      border: `1px solid ${collections[activeCollectionId].isPublic ? 'rgba(16, 185, 129, 0.3)' : colors.border}`,
-                      transition: 'all 0.15s ease',
-                    }}
-                    title="Click to toggle Public / Private visibility"
-                  >
-                    {collections[activeCollectionId].isPublic ? <Globe size={13} /> : <Lock size={13} />}
-                    <span>{collections[activeCollectionId].isPublic ? 'Public to Friends' : 'Private'}</span>
-                  </button>
-                )}
-                {activeView === 'friendCollection' && (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      padding: '5px 12px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                      color: '#10b981',
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
-                    }}
-                  >
-                    <Globe size={13} />
-                    <span>Public Collection</span>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Row 2: Subtitle (left) & Actions (right: Add to Collection, Filters) */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                flexWrap: 'wrap',
-                gap: '12px',
-              }}
-            >
-              <p style={{ margin: 0, fontSize: '13px', color: colors.textSecondary }}>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: colors.textSecondary }}>
                 {viewInfo.subtitle}
               </p>
+            </div>
 
-              {/* Action Buttons: Add to Collection & Filters */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                {activeView !== 'friendProfile' && activeView !== 'friendCollection' && (
-                  <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      backgroundColor: colors.accentLight,
-                      color: colors.accent,
-                      border: `1px solid ${colors.borderActive}30`,
-                      fontSize: '12.5px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <Plus size={15} />
-                    <span>Add to {activeView === 'collection' ? collections[activeCollectionId]?.collectionName : 'Collection'}</span>
-                  </button>
-                )}
+            {/* Action Buttons: Add to Collection & Filters */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {activeView !== 'friendProfile' && activeView !== 'friendCollection' && (
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: colors.accentLight,
+                    color: colors.accent,
+                    border: `1px solid ${colors.borderActive}30`,
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Plus size={15} />
+                  <span>Add to {activeView === 'collection' ? collections[activeCollectionId]?.collectionName : 'Collection'}</span>
+                </button>
+              )}
 
-                {/* Filter Popover Component */}
-                <FilterPopover
-                  filters={filters}
-                  onApplyFilters={(newFilters) => {
-                    setFilters(newFilters);
-                    setCurrentPage(1);
-                  }}
-                  onResetFilters={() => {
-                    setFilters(INITIAL_FILTERS);
-                    setCurrentPage(1);
-                  }}
-                  collections={collections}
-                  isAllView={activeView === 'all'}
-                  theme={theme}
-                />
-              </div>
+              {/* Filter Popover Component */}
+              <FilterPopover
+                filters={filters}
+                onApplyFilters={(newFilters) => {
+                  setFilters(newFilters);
+                  setCurrentPage(1);
+                }}
+                onResetFilters={() => {
+                  setFilters(INITIAL_FILTERS);
+                  setCurrentPage(1);
+                }}
+                collections={collections}
+                isAllView={activeView === 'all'}
+                theme={theme}
+              />
             </div>
           </div>
 
