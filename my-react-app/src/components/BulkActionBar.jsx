@@ -120,26 +120,37 @@ export function BulkActionBar({
   return (
     <div
       ref={barRef}
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-[95vw] animate-slide-up select-none"
       style={{
-        animation: 'slideUpBar 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        position: 'fixed',
+        bottom: '24px',
+        left: 0,
+        right: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 9999,
+        pointerEvents: 'none',
+        userSelect: 'none',
       }}
     >
       {/* Outer Liquid Glassmorphism Capsule */}
       <div
-        className="flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-2xl text-slate-200"
+        className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-slate-200"
         style={{
-          background: 'linear-gradient(180deg, rgba(20, 24, 40, 0.82) 0%, rgba(12, 15, 26, 0.9) 100%)',
-          backdropFilter: 'blur(24px) saturate(190%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(190%)',
-          border: '1px solid rgba(255, 255, 255, 0.09)',
+          pointerEvents: 'auto',
+          maxWidth: 'calc(100vw - 32px)',
+          background: 'linear-gradient(180deg, rgba(16, 20, 32, 0.96) 0%, rgba(10, 13, 22, 0.98) 100%)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
           boxShadow: `
-            0 20px 48px -10px rgba(0, 0, 0, 0.85),
-            0 0 0 1px rgba(255, 255, 255, 0.07),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.18),
-            inset 0 -1px 1px 0 rgba(0, 0, 0, 0.45),
-            0 0 35px -5px rgba(99, 102, 241, 0.12)
+            0 20px 48px -10px rgba(0, 0, 0, 0.95),
+            0 0 0 1px rgba(255, 255, 255, 0.08),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.2),
+            inset 0 -1px 1px 0 rgba(0, 0, 0, 0.6),
+            0 0 35px -5px rgba(99, 102, 241, 0.18)
           `,
+          animation: 'bulkBarFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         }}
       >
         {/* 1. Selection Pill Capsule */}
