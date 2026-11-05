@@ -31,6 +31,8 @@ import {
   MessageSquare,
   Link2,
   Search,
+  Award,
+  TrendingUp,
   X as CloseIcon,
 } from 'lucide-react';
 import { themes } from '../utils/themes';
@@ -1469,114 +1471,156 @@ export function EditProfilePage({
           {topCollection ? (
             <div
               style={{
-                padding: '18px',
-                borderRadius: '14px',
+                padding: '22px 24px',
+                borderRadius: '18px',
                 backgroundColor: isDark ? colors.cardBg : '#ffffff',
                 border: `1px solid ${colors.border}`,
-                boxShadow: isDark ? '0 4px 16px rgba(0, 0, 0, 0.25)' : colors.shadowSm,
+                boxShadow: isDark ? '0 8px 30px rgba(0, 0, 0, 0.4)' : colors.shadowSm,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <span
+              {/* Header Badges: Most Viewed Collection & Top Tier */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div
                   style={{
-                    fontSize: '9.5px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '5px 12px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                    border: '1px solid rgba(99, 102, 241, 0.35)',
+                    color: '#818cf8',
+                    fontSize: '11px',
                     fontWeight: '700',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                    color: '#a78bfa',
+                    letterSpacing: '0.04em',
                     textTransform: 'uppercase',
                   }}
                 >
-                  TOP COLLECTION
-                </span>
-                {topCollection.isPublic && (
-                  <span
-                    style={{
-                      fontSize: '9.5px',
-                      fontWeight: '700',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                      color: '#34d399',
-                    }}
-                  >
-                    Public
-                  </span>
-                )}
+                  <Award size={13} strokeWidth={2.2} />
+                  <span>MOST VIEWED COLLECTION</span>
+                </div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '600', color: '#34d399' }}>
+                  <TrendingUp size={14} strokeWidth={2.2} />
+                  <span>Top Tier</span>
+                </div>
               </div>
 
-              <h4 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '700', color: colors.text }}>
+              {/* Title */}
+              <h4
+                style={{
+                  margin: '0 0 10px 0',
+                  fontSize: '20px',
+                  fontWeight: '700',
+                  color: colors.text,
+                  letterSpacing: '-0.02em',
+                  lineHeight: '1.3',
+                }}
+              >
                 {topCollection.name}
               </h4>
-              <p
-                style={{
-                  margin: '0 0 12px 0',
-                  fontSize: '11.5px',
-                  color: colors.textSecondary,
-                  lineHeight: '1.4',
-                  overflow: 'hidden',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                }}
-              >
-                {topCollection.description || 'Curated link collection in your workspace.'}
-              </p>
 
+              {/* Description (shown only when it exists) */}
+              {Boolean(topCollection.description?.trim()) && (
+                <p
+                  style={{
+                    margin: '0 0 18px 0',
+                    fontSize: '13px',
+                    color: isDark ? '#94a3b8' : colors.textSecondary,
+                    lineHeight: '1.5',
+                    overflow: 'hidden',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                  }}
+                >
+                  {topCollection.description}
+                </p>
+              )}
+
+              {/* Stats Box: Views, Links, and Type of Collection */}
               <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
                   gap: '16px',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  backgroundColor: isDark ? colors.bgSecondary : '#f8fafc',
-                  marginBottom: '12px',
-                  fontSize: '11.5px',
+                  padding: '16px 20px',
+                  borderRadius: '14px',
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.32)' : '#f8fafc',
+                  border: isDark ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid #e2e8f0',
+                  marginBottom: '20px',
                 }}
               >
                 <div>
-                  <span style={{ fontWeight: '700', color: colors.text }}>
-                    {topCollectionViews >= 1000 ? `${(topCollectionViews / 1000).toFixed(1)}k` : topCollectionViews}{' '}
-                  </span>
-                  <span style={{ color: colors.textTertiary }}>Views</span>
+                  <div style={{ fontSize: '20px', fontWeight: '700', color: colors.text, lineHeight: '1.2' }}>
+                    {topCollectionViews >= 1000
+                      ? `${(topCollectionViews / 1000).toFixed(1)}k`
+                      : topCollectionViews || 0}
+                  </div>
+                  <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : colors.textTertiary, marginTop: '4px' }}>
+                    Views
+                  </div>
                 </div>
+
                 <div>
-                  <span style={{ fontWeight: '700', color: colors.text }}>{topCollectionLinksCount}{' '}</span>
-                  <span style={{ color: colors.textTertiary }}>Links</span>
+                  <div style={{ fontSize: '20px', fontWeight: '700', color: '#34d399', lineHeight: '1.2' }}>
+                    {topCollectionLinksCount || 0}
+                  </div>
+                  <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : colors.textTertiary, marginTop: '4px' }}>
+                    Links
+                  </div>
                 </div>
+
                 <div>
-                  <span style={{ fontWeight: '700', color: colors.text }}>
+                  <div style={{ fontSize: '20px', fontWeight: '700', color: '#c084fc', lineHeight: '1.2' }}>
                     {topCollection.isPublic ? 'Public' : 'Private'}
-                  </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : colors.textTertiary, marginTop: '4px' }}>
+                    Type
+                  </div>
                 </div>
               </div>
 
+              {/* Bottom Row: Public Feed / Private Collection Indicator & Open Collection Action */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', color: topCollection.isPublic ? '#10b981' : colors.textTertiary, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: topCollection.isPublic ? '#10b981' : '#64748b' }} />
-                  {topCollection.isPublic ? 'Public Feed' : 'Private Workspace'}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: isDark ? '#94a3b8' : colors.textSecondary, fontWeight: '500' }}>
+                  <span
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      backgroundColor: '#10b981',
+                      display: 'inline-block',
+                      boxShadow: '0 0 8px rgba(16, 185, 129, 0.7)',
+                    }}
+                  />
+                  <span>{topCollection.isPublic ? 'Public Feed' : 'Private Collection'}</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => onOpenCollection && onOpenCollection(topCollection)}
                   style={{
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    padding: '5px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: '#6366f1',
-                    color: '#ffffff',
-                    fontSize: '11.5px',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    borderRadius: '9px',
+                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    backgroundColor: isDark ? 'rgba(99, 102, 241, 0.18)' : '#e0e7ff',
+                    color: isDark ? '#c7d2fe' : '#4338ca',
+                    fontSize: '12.5px',
                     fontWeight: '600',
                     cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(99, 102, 241, 0.28)' : '#c7d2fe';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(99, 102, 241, 0.18)' : '#e0e7ff';
                   }}
                 >
                   <span>Open Collection</span>
-                  <ArrowRight size={12} />
+                  <ArrowRight size={13} strokeWidth={2.2} />
                 </button>
               </div>
             </div>
