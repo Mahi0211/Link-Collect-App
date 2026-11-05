@@ -351,10 +351,29 @@ export function EditProfilePage({
     });
   };
 
-  // Dynamic Highlight calculations strictly from user's DB collections & links
-  const publicCollections = collections.filter((c) => c.isPublic);
-  const topCollection = publicCollections[0] || collections[0] || null;
-  const topCollectionLinks = topCollection ? links.filter((l) => l.collectionId === topCollection.id) : [];
+  // Helper to match links for a collection by ID or collection name
+  const getLinksForCollection = (col) => {
+    if (!col) return [];
+    return links.filter(
+      (l) =>
+        (col.id && l.collectionId === col.id) ||
+        (col.collectionName && l.collectionName && l.collectionName.toLowerCase() === col.collectionName.toLowerCase()) ||
+        (col.name && l.collectionName && l.collectionName.toLowerCase() === col.name.toLowerCase())
+    );
+  };
+
+  // Dynamic Highlight calculations: find the top collection by views and link count
+  const sortedCollections = [...collections].sort((a, b) => {
+    const viewsB = getLinksForCollection(b).reduce((sum, l) => sum + (l.watchCount || 0), 0);
+    const viewsA = getLinksForCollection(a).reduce((sum, l) => sum + (l.watchCount || 0), 0);
+    if (viewsB !== viewsA) return viewsB - viewsA;
+    const linksB = b.totalLinks || getLinksForCollection(b).length || 0;
+    const linksA = a.totalLinks || getLinksForCollection(a).length || 0;
+    return linksB - linksA;
+  });
+
+  const topCollection = sortedCollections[0] || null;
+  const topCollectionLinks = getLinksForCollection(topCollection);
   const topCollectionLinksCount = topCollectionLinks.length || topCollection?.totalLinks || 0;
   const topCollectionViews = topCollectionLinks.reduce((sum, l) => sum + (l.watchCount || 0), 0);
 
@@ -1516,7 +1535,7 @@ export function EditProfilePage({
                   lineHeight: '1.3',
                 }}
               >
-                {topCollection.name}
+                {topCollection.collectionName || topCollection.name || topCollection.title || 'Untitled Collection'}
               </h4>
 
               {/* Description (shown only when it exists) */}
@@ -1785,11 +1804,11 @@ export function EditProfilePage({
                   <p style={{ margin: '0 0 2px 0', fontSize: '11px', color: colors.textTertiary }}>
                     {recentlyFavorited.url?.replace(/^https?:\/\//, '').split('/')[0]}
                     {(() => {
-                      const col = collections.find((c) => c.id === recentlyFavorited.collectionId);
+                      const col = collections.find((c) => c.id === recentlyFavorited.collectionId || (c.collectionName && c.collectionName === recentlyFavorited.collectionName));
                       return col ? (
                         <>
                           {' • '}
-                          <span style={{ color: '#a78bfa' }}>{col.name}</span>
+                          <span style={{ color: '#a78bfa' }}>{col.collectionName || col.name}</span>
                         </>
                       ) : null;
                     })()}
