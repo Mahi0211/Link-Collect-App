@@ -895,17 +895,18 @@ export function EditProfilePage({
         </div>
       </div>
 
-      {/* MAIN TWO-COLUMN CONTENT GRID */}
+      {/* MAIN TWO-COLUMN CONTENT GRID (60% Left / 40% Right) */}
       <div
+        className="edit-profile-layout-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)',
           gap: '24px',
           alignItems: 'start',
         }}
       >
-        {/* LEFT COLUMN: Settings & Forms */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* LEFT COLUMN: Settings & Forms (60%) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
           {/* CARD 1: Personal Information */}
           <div
             style={{
@@ -1439,8 +1440,8 @@ export function EditProfilePage({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Curation & Activity Highlights */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* RIGHT COLUMN: Curation & Activity Highlights (40%) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

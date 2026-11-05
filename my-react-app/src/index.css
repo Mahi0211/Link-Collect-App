@@ -254,3 +254,17 @@
     margin-left: auto;
   }
 }
+
+/* Edit Profile 60% / 40% Responsive Layout Grid */
+.edit-profile-layout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .edit-profile-layout-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
