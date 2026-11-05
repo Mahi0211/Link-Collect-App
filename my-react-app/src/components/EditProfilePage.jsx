@@ -48,34 +48,25 @@ export function EditProfilePage({
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
 
-  // Form state
+  // Form state (loaded strictly from user DB record)
   const [name, setName] = useState(user?.name || '');
   const [username, setUsername] = useState(user?.username || '');
   const [email] = useState(user?.email || '');
-  const [roleTitle, setRoleTitle] = useState(user?.roleTitle || 'Staff Product Designer & Curation Lead');
-  const [location, setLocation] = useState(user?.location || 'San Francisco, CA (UTC-7)');
-  const [bio, setBio] = useState(
-    user?.bio ||
-      'Curating the web\'s best design systems, retro apparel, and frontend tools. Building thoughtful digital spaces.'
-  );
+  const [roleTitle, setRoleTitle] = useState(user?.roleTitle || '');
+  const [location, setLocation] = useState(user?.location || '');
+  const [bio, setBio] = useState(user?.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
   const [coverUrl, setCoverUrl] = useState(user?.coverUrl || '');
 
-  // Social Links state (parsed from user.socialLinksJson or default)
-  const defaultSocials = {
-    twitter: '@alexkiradev',
-    github: 'becauseiamkira',
-    portfolio: 'alexkira.design',
-    farcaster: '@alexkira',
-  };
-
+  // Social Links state (parsed from user.socialLinksJson or empty)
   const [socialLinks, setSocialLinks] = useState(() => {
     if (user?.socialLinksJson) {
       try {
-        return JSON.parse(user.socialLinksJson);
+        const parsed = JSON.parse(user.socialLinksJson);
+        if (parsed && typeof parsed === 'object') return parsed;
       } catch {}
     }
-    return defaultSocials;
+    return {};
   });
 
   // UI state
@@ -84,50 +75,12 @@ export function EditProfilePage({
   const [usernameStatus, setUsernameStatus] = useState('available'); // 'available', 'checking', 'taken'
   const [feedback, setFeedback] = useState({ text: '', type: '' });
   const [showAddSocialModal, setShowAddSocialModal] = useState(false);
-  const [newSocialPlatform, setNewSocialPlatform] = useState('Figma');
+  const [newSocialPlatform, setNewSocialPlatform] = useState('Twitter');
   const [newSocialHandle, setNewSocialHandle] = useState('');
 
-  // Friends & Network state
-  const defaultCurators = [
-    {
-      id: 'c1',
-      name: 'Sarah Jenkins',
-      username: 'sjenkins',
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-      isOnline: true,
-      contextType: 'mutual-links',
-      contextText: '14 mutual links',
-    },
-    {
-      id: 'c2',
-      name: 'Devon Vance',
-      username: 'devonv',
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      isOnline: true,
-      contextType: 'shared-collections',
-      contextText: '3 shared collections',
-    },
-    {
-      id: 'c3',
-      name: 'Elena Rostova',
-      username: 'erostova',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      isOnline: false,
-      contextType: 'active-time',
-      contextText: 'Active 12m ago',
-    },
-    {
-      id: 'c4',
-      name: 'Marcus Chen',
-      username: 'marcusc',
-      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-      isOnline: true,
-      contextType: 'mutual-links',
-      contextText: '9 mutual links',
-    },
-  ];
-
+  // Friends & Network state (populated strictly from DB)
   const [friendsList, setFriendsList] = useState([]);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteSearchQuery, setInviteSearchQuery] = useState('');
   const [inviteSearchResults, setInviteSearchResults] = useState([]);
@@ -135,16 +88,22 @@ export function EditProfilePage({
   const [inviteSentIds, setInviteSentIds] = useState(new Set());
   const [isInviteCopied, setIsInviteCopied] = useState(false);
 
-  // Load real friends on mount
+  // Load real friends on mount from DB
   useEffect(() => {
     let isMounted = true;
+    setIsLoadingFriends(true);
     api.getFriends()
       .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          setFriendsList(data);
+        if (isMounted) {
+          setFriendsList(Array.isArray(data) ? data : []);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (isMounted) setFriendsList([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingFriends(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -235,20 +194,20 @@ export function EditProfilePage({
   const handleDiscard = () => {
     setName(user?.name || '');
     setUsername(user?.username || '');
-    setRoleTitle(user?.roleTitle || 'Staff Product Designer & Curation Lead');
-    setLocation(user?.location || 'San Francisco, CA (UTC-7)');
-    setBio(
-      user?.bio ||
-        'Curating the web\'s best design systems, retro apparel, and frontend tools. Building thoughtful digital spaces.'
-    );
+    setRoleTitle(user?.roleTitle || '');
+    setLocation(user?.location || '');
+    setBio(user?.bio || '');
     setAvatarUrl(user?.avatarUrl || '');
     setCoverUrl(user?.coverUrl || '');
     if (user?.socialLinksJson) {
       try {
-        setSocialLinks(JSON.parse(user.socialLinksJson));
-      } catch {}
+        const parsed = JSON.parse(user.socialLinksJson);
+        setSocialLinks(parsed && typeof parsed === 'object' ? parsed : {});
+      } catch {
+        setSocialLinks({});
+      }
     } else {
-      setSocialLinks(defaultSocials);
+      setSocialLinks({});
     }
     showFeedback('Changes discarded.', 'info');
   };
@@ -390,46 +349,77 @@ export function EditProfilePage({
     });
   };
 
-  // Dynamic Highlight calculations from user's live collections & links
-  const mostViewedCollection =
-    collections.find((c) => c.isPublic) || collections[0] || {
-      id: 1,
-      name: 'Design Engineering Systems & Retro Apparel',
-      description: 'Comprehensive curated repository spanning atomic design tokens, retro sportswear...',
+  // Dynamic Highlight calculations strictly from user's DB collections & links
+  const publicCollections = collections.filter((c) => c.isPublic);
+  const topCollection = publicCollections[0] || collections[0] || null;
+  const topCollectionLinks = topCollection ? links.filter((l) => l.collectionId === topCollection.id) : [];
+  const topCollectionLinksCount = topCollectionLinks.length || topCollection?.totalLinks || 0;
+  const topCollectionViews = topCollectionLinks.reduce((sum, l) => sum + (l.watchCount || 0), 0);
+
+  // Link with highest watch/visit count from DB (or first link if watches are 0)
+  const mostViewedLink =
+    links.length > 0
+      ? [...links].sort((a, b) => (b.watchCount || 0) - (a.watchCount || 0))[0]
+      : null;
+
+  // Starred / Favorited link from DB
+  const recentlyFavorited = links.find((l) => l.isFavorite) || null;
+
+  // Connected socials count from user DB record
+  const connectedSocialsCount = Object.keys(socialLinks).filter((k) => Boolean(socialLinks[k])).length;
+
+  // Curators strictly from DB friendships
+  const displayCurators = Array.isArray(friendsList) ? friendsList : [];
+
+  // Helper formatting for social platforms
+  const formatPlatformName = (key) => {
+    const map = {
+      twitter: 'X / Twitter',
+      x: 'X / Twitter',
+      github: 'GitHub',
+      portfolio: 'Portfolio / Website',
+      website: 'Portfolio / Website',
+      farcaster: 'Farcaster',
+      figma: 'Figma',
+      dribbble: 'Dribbble',
+      linkedin: 'LinkedIn',
     };
-
-  const collectionLinksCount = links.filter((l) => l.collectionId === mostViewedCollection.id).length;
-
-  const mostViewedLink = links[0] || {
-    id: 101,
-    url: 'https://github.com/becauseiamkira',
-    title: 'Modern CSS Grid & Fluid Typography Systems',
+    return map[key.toLowerCase()] || key.charAt(0).toUpperCase() + key.slice(1);
   };
 
-  const recentlyFavorited = links.find((l) => l.isFavorite) || links[1] || {
-    id: 103,
-    url: 'https://linear.app/motion',
-    title: 'Linear Rebuild: Motion & Micro-interactions Guide',
+  const getPlatformSubtext = (key) => {
+    const map = {
+      twitter: 'Connected account',
+      x: 'Connected account',
+      github: 'Synced repository profile',
+      portfolio: 'Primary Domain',
+      website: 'Personal Website',
+      farcaster: 'Decentralized social',
+      figma: 'Design workspace',
+      dribbble: 'Creative portfolio',
+      linkedin: 'Professional network',
+    };
+    return map[key.toLowerCase()] || 'Connected profile';
   };
 
-  const displayCurators =
-    friendsList.length > 0
-      ? [
-          ...friendsList.map((f, idx) => ({
-            id: f.id,
-            name: f.name || f.username,
-            username: f.username,
-            avatarUrl: f.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.username}`,
-            isOnline: idx % 2 === 0,
-            contextType: f.publicCollectionsCount > 0 ? 'shared-collections' : 'mutual-links',
-            contextText:
-              f.publicCollectionsCount > 0
-                ? `${f.publicCollectionsCount} shared collections`
-                : `${f.publicLinksCount || 10} mutual links`,
-          })),
-          ...defaultCurators.slice(friendsList.length),
-        ].slice(0, 4)
-      : defaultCurators;
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return 'recently';
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffSec = Math.floor((now - date) / 1000);
+      if (diffSec < 60) return 'just now';
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m ago`;
+      const diffHr = Math.floor(diffMin / 60);
+      if (diffHr < 24) return `${diffHr}h ago`;
+      const diffDays = Math.floor(diffHr / 24);
+      if (diffDays < 30) return `${diffDays}d ago`;
+      return date.toLocaleDateString();
+    } catch {
+      return 'recently';
+    }
+  };
 
   return (
     <div
@@ -784,7 +774,7 @@ export function EditProfilePage({
                     letterSpacing: '-0.02em',
                   }}
                 >
-                  {name || 'Alex Kira Morgan'}
+                  {name || user?.name || 'Unnamed Curator'}
                 </h2>
 
                 <span
@@ -822,16 +812,24 @@ export function EditProfilePage({
                   }}
                 >
                   <Sparkles size={11} />
-                  <span>2.5k reach</span>
+                  <span>{links.length + collections.length > 0 ? `${links.length} links • ${collections.length} collections` : 'New Curator'}</span>
                 </span>
               </div>
 
               <p style={{ margin: 0, fontSize: '12.5px', color: colors.textSecondary }}>
-                <span>{roleTitle || 'Staff Product Designer & Curation Lead'}</span>
+                {roleTitle ? (
+                  <span>{roleTitle}</span>
+                ) : (
+                  <span style={{ color: colors.textTertiary, fontStyle: 'italic' }}>No role specified</span>
+                )}
                 <span style={{ margin: '0 8px' }}>•</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                   <MapPin size={12} color={colors.textTertiary} />
-                  <span>{location || 'San Francisco, CA'}</span>
+                  {location ? (
+                    <span>{location}</span>
+                  ) : (
+                    <span style={{ color: colors.textTertiary, fontStyle: 'italic' }}>Location not specified</span>
+                  )}
                 </span>
               </p>
             </div>
@@ -985,7 +983,7 @@ export function EditProfilePage({
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Alex Kira Morgan"
+                      placeholder="Your full name"
                       style={{
                         width: '100%',
                         padding: '9.5px 12px 9.5px 34px',
@@ -1049,7 +1047,7 @@ export function EditProfilePage({
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                      placeholder="becauseiamkira1986"
+                      placeholder="username"
                       style={{
                         width: '100%',
                         padding: '9.5px 12px 9.5px 28px',
@@ -1127,7 +1125,7 @@ export function EditProfilePage({
                       type="text"
                       value={roleTitle}
                       onChange={(e) => setRoleTitle(e.target.value)}
-                      placeholder="Staff Product Designer & Curation Lead"
+                      placeholder="e.g. Lead Designer, Software Engineer..."
                       style={{
                         width: '100%',
                         padding: '9.5px 12px 9.5px 34px',
@@ -1165,7 +1163,7 @@ export function EditProfilePage({
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder="San Francisco, CA (UTC-7)"
+                    placeholder="e.g. San Francisco, CA (UTC-7)"
                     style={{
                       width: '100%',
                       padding: '9.5px 12px 9.5px 34px',
@@ -1203,7 +1201,7 @@ export function EditProfilePage({
                   maxLength={BIO_MAX_LENGTH}
                   onChange={(e) => setBio(e.target.value)}
                   rows={3}
-                  placeholder="Curating the web's best design systems, retro apparel, and frontend tools..."
+                  placeholder="Write a brief bio about yourself and your curations..."
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -1280,7 +1278,7 @@ export function EditProfilePage({
                         color: '#818cf8',
                       }}
                     >
-                      {Object.keys(socialLinks).length} Connected
+                      {connectedSocialsCount} Connected
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: '11.5px', color: colors.textSecondary }}>
@@ -1312,151 +1310,74 @@ export function EditProfilePage({
               </button>
             </div>
 
-            {/* 2x2 Connected Profiles Grid */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                gap: '12px',
-                marginBottom: '20px',
-              }}
-            >
-              {/* X / Twitter */}
-              {socialLinks.twitter !== undefined && (
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    backgroundColor: isDark ? colors.bgSecondary : '#f8fafc',
-                    border: `1px solid ${colors.border}`,
-                    position: 'relative',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '600', color: colors.text }}>X / Twitter</span>
-                    <span style={{ fontSize: '10px', fontWeight: '600', color: '#10b981', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} /> Active
-                    </span>
-                  </div>
-                  <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#818cf8', fontWeight: '500' }}>
-                    {socialLinks.twitter}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: colors.textTertiary }}>
-                    <span>Updated 2d ago</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSocial('twitter')}
-                      style={{ background: 'none', border: 'none', padding: 0, color: colors.textTertiary, cursor: 'pointer' }}
-                      title="Disconnect"
+            {/* Connected Profiles Grid or Empty State */}
+            {connectedSocialsCount === 0 ? (
+              <div
+                style={{
+                  padding: '28px 20px',
+                  borderRadius: '12px',
+                  border: `1px dashed ${colors.border}`,
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#f8fafc',
+                  textAlign: 'center',
+                  marginBottom: '20px',
+                }}
+              >
+                <Share2 size={24} style={{ color: colors.textTertiary, margin: '0 auto 8px', display: 'block' }} />
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '13.5px', fontWeight: '600', color: colors.text }}>
+                  No social profiles connected yet
+                </h4>
+                <p style={{ margin: '0 auto', maxWidth: '380px', fontSize: '12px', color: colors.textTertiary, lineHeight: '1.4' }}>
+                  Link your Twitter, GitHub, personal portfolio, or design accounts to showcase them on your public profile header.
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                  gap: '12px',
+                  marginBottom: '20px',
+                }}
+              >
+                {Object.entries(socialLinks)
+                  .filter(([_, val]) => Boolean(val))
+                  .map(([key, handle]) => (
+                    <div
+                      key={key}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        backgroundColor: isDark ? colors.bgSecondary : '#f8fafc',
+                        border: `1px solid ${colors.border}`,
+                        position: 'relative',
+                      }}
                     >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* GitHub */}
-              {socialLinks.github !== undefined && (
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    backgroundColor: isDark ? colors.bgSecondary : '#f8fafc',
-                    border: `1px solid ${colors.border}`,
-                    position: 'relative',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '600', color: colors.text }}>GitHub</span>
-                    <span style={{ fontSize: '10px', fontWeight: '600', color: '#10b981', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} /> Active
-                    </span>
-                  </div>
-                  <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#818cf8', fontWeight: '500' }}>
-                    {socialLinks.github}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: colors.textTertiary }}>
-                    <span>Synced repo stars</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSocial('github')}
-                      style={{ background: 'none', border: 'none', padding: 0, color: colors.textTertiary, cursor: 'pointer' }}
-                      title="Disconnect"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Portfolio */}
-              {socialLinks.portfolio !== undefined && (
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    backgroundColor: isDark ? colors.bgSecondary : '#f8fafc',
-                    border: `1px solid ${colors.border}`,
-                    position: 'relative',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '600', color: colors.text }}>Portfolio</span>
-                    <span style={{ fontSize: '10px', fontWeight: '600', color: '#38bdf8', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(56, 189, 248, 0.1)' }}>
-                      Primary Domain
-                    </span>
-                  </div>
-                  <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#818cf8', fontWeight: '500' }}>
-                    {socialLinks.portfolio}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: colors.textTertiary }}>
-                    <span>SSL verified</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSocial('portfolio')}
-                      style={{ background: 'none', border: 'none', padding: 0, color: colors.textTertiary, cursor: 'pointer' }}
-                      title="Disconnect"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Farcaster */}
-              {socialLinks.farcaster !== undefined && (
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    backgroundColor: isDark ? colors.bgSecondary : '#f8fafc',
-                    border: `1px solid ${colors.border}`,
-                    position: 'relative',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '600', color: colors.text }}>Farcaster</span>
-                    <span style={{ fontSize: '10px', fontWeight: '600', color: '#10b981', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} /> Active
-                    </span>
-                  </div>
-                  <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#818cf8', fontWeight: '500' }}>
-                    {socialLinks.farcaster}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: colors.textTertiary }}>
-                    <span>FID: 18492</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSocial('farcaster')}
-                      style={{ background: 'none', border: 'none', padding: 0, color: colors.textTertiary, cursor: 'pointer' }}
-                      title="Disconnect"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: colors.text }}>
+                          {formatPlatformName(key)}
+                        </span>
+                        <span style={{ fontSize: '10px', fontWeight: '600', color: '#10b981', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} /> Active
+                        </span>
+                      </div>
+                      <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#818cf8', fontWeight: '500', wordBreak: 'break-all' }}>
+                        {handle}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: colors.textTertiary }}>
+                        <span>{getPlatformSubtext(key)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSocial(key)}
+                          style={{ background: 'none', border: 'none', padding: 0, color: colors.textTertiary, cursor: 'pointer' }}
+                          title="Disconnect"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
 
             {/* Quick Connect Services */}
             <div>
@@ -1543,257 +1464,336 @@ export function EditProfilePage({
             </span>
           </div>
 
-          {/* CARD 1: Most Viewed Collection */}
-          <div
-            style={{
-              padding: '18px',
-              borderRadius: '14px',
-              backgroundColor: isDark ? colors.cardBg : '#ffffff',
-              border: `1px solid ${colors.border}`,
-              boxShadow: isDark ? '0 4px 16px rgba(0, 0, 0, 0.25)' : colors.shadowSm,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <span
-                style={{
-                  fontSize: '9.5px',
-                  fontWeight: '700',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                  color: '#a78bfa',
-                  textTransform: 'uppercase',
-                }}
-              >
-                MOST VIEWED COLLECTION
-              </span>
-              <span
-                style={{
-                  fontSize: '9.5px',
-                  fontWeight: '700',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                  color: '#34d399',
-                }}
-              >
-                Top Tier
-              </span>
-            </div>
-
-            <h4 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '700', color: colors.text }}>
-              {mostViewedCollection.name}
-            </h4>
-            <p
-              style={{
-                margin: '0 0 12px 0',
-                fontSize: '11.5px',
-                color: colors.textSecondary,
-                lineHeight: '1.4',
-                overflow: 'hidden',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-              }}
-            >
-              {mostViewedCollection.description || 'Comprehensive curated repository for quick reference.'}
-            </p>
-
+          {/* CARD 1: Top / Most Viewed Collection */}
+          {topCollection ? (
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                backgroundColor: isDark ? colors.bgSecondary : '#f8fafc',
-                marginBottom: '12px',
-                fontSize: '11.5px',
+                padding: '18px',
+                borderRadius: '14px',
+                backgroundColor: isDark ? colors.cardBg : '#ffffff',
+                border: `1px solid ${colors.border}`,
+                boxShadow: isDark ? '0 4px 16px rgba(0, 0, 0, 0.25)' : colors.shadowSm,
               }}
             >
-              <div>
-                <span style={{ fontWeight: '700', color: colors.text }}>18.4k </span>
-                <span style={{ color: colors.textTertiary }}>Views</span>
-              </div>
-              <div>
-                <span style={{ fontWeight: '700', color: colors.text }}>{collectionLinksCount || 27} </span>
-                <span style={{ color: colors.textTertiary }}>Links</span>
-              </div>
-              <div>
-                <span style={{ fontWeight: '700', color: colors.text }}>142 </span>
-                <span style={{ color: colors.textTertiary }}>Followers</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                Public Feed
-              </span>
-              <button
-                type="button"
-                onClick={() => onOpenCollection && onOpenCollection(mostViewedCollection)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '5px 10px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: '#6366f1',
-                  color: '#ffffff',
-                  fontSize: '11.5px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                }}
-              >
-                <span>Open Collection</span>
-                <ArrowRight size={12} />
-              </button>
-            </div>
-          </div>
-
-          {/* CARD 2: Most Viewed Link */}
-          <div
-            style={{
-              padding: '16px',
-              borderRadius: '14px',
-              backgroundColor: isDark ? colors.cardBg : '#ffffff',
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span
-                style={{
-                  fontSize: '9.5px',
-                  fontWeight: '700',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                  color: '#a78bfa',
-                  textTransform: 'uppercase',
-                }}
-              >
-                MOST VIEWED LINK
-              </span>
-              <span style={{ fontSize: '11px', fontWeight: '600', color: '#10b981' }}>+24%</span>
-            </div>
-
-            <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: colors.textTertiary }}>
-              {mostViewedLink.url?.replace(/^https?:\/\//, '').split('/')[0]} • 3 min read
-            </p>
-            <h4
-              style={{
-                margin: '0 0 10px 0',
-                fontSize: '13px',
-                fontWeight: '600',
-                color: colors.text,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {mostViewedLink.title}
-            </h4>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11.5px' }}>
-              <span style={{ color: colors.textSecondary }}>8.9k total visits</span>
-              <a
-                href={mostViewedLink.url}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  color: colors.accent,
-                  textDecoration: 'none',
-                  fontWeight: '600',
-                }}
-              >
-                <span>Visit</span>
-                <ExternalLink size={12} />
-              </a>
-            </div>
-          </div>
-
-          {/* CARD 3: Recently Favorited */}
-          <div
-            style={{
-              padding: '16px',
-              borderRadius: '14px',
-              backgroundColor: isDark ? colors.cardBg : '#ffffff',
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span
-                style={{
-                  fontSize: '9.5px',
-                  fontWeight: '700',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(244, 63, 94, 0.15)',
-                  color: '#f43f5e',
-                  textTransform: 'uppercase',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <Heart size={10} fill="#f43f5e" /> RECENTLY FAVORITED
-              </span>
-              <span style={{ fontSize: '11px', color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Clock size={11} /> 45 mins ago
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(244, 63, 94, 0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#f43f5e',
-                  flexShrink: 0,
-                }}
-              >
-                <Heart size={15} fill="#f43f5e" />
-              </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{ margin: '0 0 2px 0', fontSize: '11px', color: colors.textTertiary }}>
-                  {recentlyFavorited.url?.replace(/^https?:\/\//, '').split('/')[0]} • <span style={{ color: '#a78bfa' }}>UI Dynamics</span>
-                </p>
-                <h4
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <span
                   style={{
-                    margin: 0,
-                    fontSize: '12.5px',
-                    fontWeight: '600',
-                    color: colors.text,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    fontSize: '9.5px',
+                    fontWeight: '700',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                    color: '#a78bfa',
+                    textTransform: 'uppercase',
                   }}
                 >
-                  {recentlyFavorited.title}
-                </h4>
+                  TOP COLLECTION
+                </span>
+                {topCollection.isPublic && (
+                  <span
+                    style={{
+                      fontSize: '9.5px',
+                      fontWeight: '700',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                      color: '#34d399',
+                    }}
+                  >
+                    Public
+                  </span>
+                )}
+              </div>
+
+              <h4 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '700', color: colors.text }}>
+                {topCollection.name}
+              </h4>
+              <p
+                style={{
+                  margin: '0 0 12px 0',
+                  fontSize: '11.5px',
+                  color: colors.textSecondary,
+                  lineHeight: '1.4',
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                }}
+              >
+                {topCollection.description || 'Curated link collection in your workspace.'}
+              </p>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  backgroundColor: isDark ? colors.bgSecondary : '#f8fafc',
+                  marginBottom: '12px',
+                  fontSize: '11.5px',
+                }}
+              >
+                <div>
+                  <span style={{ fontWeight: '700', color: colors.text }}>
+                    {topCollectionViews >= 1000 ? `${(topCollectionViews / 1000).toFixed(1)}k` : topCollectionViews}{' '}
+                  </span>
+                  <span style={{ color: colors.textTertiary }}>Views</span>
+                </div>
+                <div>
+                  <span style={{ fontWeight: '700', color: colors.text }}>{topCollectionLinksCount}{' '}</span>
+                  <span style={{ color: colors.textTertiary }}>Links</span>
+                </div>
+                <div>
+                  <span style={{ fontWeight: '700', color: colors.text }}>
+                    {topCollection.isPublic ? 'Public' : 'Private'}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '11px', color: topCollection.isPublic ? '#10b981' : colors.textTertiary, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: topCollection.isPublic ? '#10b981' : '#64748b' }} />
+                  {topCollection.isPublic ? 'Public Feed' : 'Private Workspace'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onOpenCollection && onOpenCollection(topCollection)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '5px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: '#6366f1',
+                    color: '#ffffff',
+                    fontSize: '11.5px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span>Open Collection</span>
+                  <ArrowRight size={12} />
+                </button>
               </div>
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11.5px' }}>
-              <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Folder size={12} color={colors.textTertiary} />
-                <span>Pinned to Favourites</span>
-              </span>
-              <a href={recentlyFavorited.url} target="_blank" rel="noreferrer" style={{ color: colors.accent, display: 'flex', alignItems: 'center' }}>
-                <ExternalLink size={13} />
-              </a>
+          ) : (
+            <div
+              style={{
+                padding: '24px 20px',
+                borderRadius: '14px',
+                backgroundColor: isDark ? colors.cardBg : '#ffffff',
+                border: `1px dashed ${colors.border}`,
+                textAlign: 'center',
+                boxShadow: isDark ? '0 4px 16px rgba(0, 0, 0, 0.25)' : colors.shadowSm,
+              }}
+            >
+              <Folder size={26} style={{ color: colors.textTertiary, margin: '0 auto 8px', display: 'block' }} />
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '13.5px', fontWeight: '600', color: colors.text }}>
+                No collections yet
+              </h4>
+              <p style={{ margin: 0, fontSize: '12px', color: colors.textTertiary, lineHeight: '1.4' }}>
+                Create collections in your workspace to feature your top curation here.
+              </p>
             </div>
-          </div>
+          )}
+
+          {/* CARD 2: Most Viewed Link */}
+          {mostViewedLink ? (
+            <div
+              style={{
+                padding: '16px',
+                borderRadius: '14px',
+                backgroundColor: isDark ? colors.cardBg : '#ffffff',
+                border: `1px solid ${colors.border}`,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span
+                  style={{
+                    fontSize: '9.5px',
+                    fontWeight: '700',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                    color: '#a78bfa',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  MOST VIEWED LINK
+                </span>
+                <span style={{ fontSize: '11px', fontWeight: '600', color: '#10b981' }}>
+                  {mostViewedLink.watchCount || 0} visits
+                </span>
+              </div>
+
+              <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: colors.textTertiary }}>
+                {mostViewedLink.url?.replace(/^https?:\/\//, '').split('/')[0]}
+              </p>
+              <h4
+                style={{
+                  margin: '0 0 10px 0',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: colors.text,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {mostViewedLink.title || mostViewedLink.url}
+              </h4>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11.5px' }}>
+                <span style={{ color: colors.textSecondary }}>
+                  {mostViewedLink.watchCount || 0} {mostViewedLink.watchCount === 1 ? 'total visit' : 'total visits'}
+                </span>
+                <a
+                  href={mostViewedLink.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: colors.accent,
+                    textDecoration: 'none',
+                    fontWeight: '600',
+                  }}
+                >
+                  <span>Visit</span>
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: '20px',
+                borderRadius: '14px',
+                backgroundColor: isDark ? colors.cardBg : '#ffffff',
+                border: `1px dashed ${colors.border}`,
+                textAlign: 'center',
+              }}
+            >
+              <Bookmark size={24} style={{ color: colors.textTertiary, margin: '0 auto 8px', display: 'block' }} />
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: '600', color: colors.text }}>
+                No links saved yet
+              </h4>
+              <p style={{ margin: 0, fontSize: '11.5px', color: colors.textTertiary }}>
+                Add links to your workspace to track visits and views.
+              </p>
+            </div>
+          )}
+
+          {/* CARD 3: Recently Favorited */}
+          {recentlyFavorited ? (
+            <div
+              style={{
+                padding: '16px',
+                borderRadius: '14px',
+                backgroundColor: isDark ? colors.cardBg : '#ffffff',
+                border: `1px solid ${colors.border}`,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <span
+                  style={{
+                    fontSize: '9.5px',
+                    fontWeight: '700',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                    color: '#f43f5e',
+                    textTransform: 'uppercase',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Heart size={10} fill="#f43f5e" /> RECENTLY FAVORITED
+                </span>
+                <span style={{ fontSize: '11px', color: colors.textTertiary, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Clock size={11} /> {formatRelativeTime(recentlyFavorited.updatedAt || recentlyFavorited.createdAt)}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(244, 63, 94, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#f43f5e',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Heart size={15} fill="#f43f5e" />
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <p style={{ margin: '0 0 2px 0', fontSize: '11px', color: colors.textTertiary }}>
+                    {recentlyFavorited.url?.replace(/^https?:\/\//, '').split('/')[0]}
+                    {(() => {
+                      const col = collections.find((c) => c.id === recentlyFavorited.collectionId);
+                      return col ? (
+                        <>
+                          {' • '}
+                          <span style={{ color: '#a78bfa' }}>{col.name}</span>
+                        </>
+                      ) : null;
+                    })()}
+                  </p>
+                  <h4
+                    style={{
+                      margin: 0,
+                      fontSize: '12.5px',
+                      fontWeight: '600',
+                      color: colors.text,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {recentlyFavorited.title || recentlyFavorited.url}
+                  </h4>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11.5px' }}>
+                <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Folder size={12} color={colors.textTertiary} />
+                  <span>Pinned to Favourites</span>
+                </span>
+                <a href={recentlyFavorited.url} target="_blank" rel="noreferrer" style={{ color: colors.accent, display: 'flex', alignItems: 'center' }}>
+                  <ExternalLink size={13} />
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: '20px',
+                borderRadius: '14px',
+                backgroundColor: isDark ? colors.cardBg : '#ffffff',
+                border: `1px dashed ${colors.border}`,
+                textAlign: 'center',
+              }}
+            >
+              <Heart size={24} style={{ color: colors.textTertiary, margin: '0 auto 8px', display: 'block' }} />
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: '600', color: colors.text }}>
+                No favorited links yet
+              </h4>
+              <p style={{ margin: 0, fontSize: '11.5px', color: colors.textTertiary }}>
+                Star your favorite links in any collection to feature them here.
+              </p>
+            </div>
+          )}
 
           {/* CARD 4: Friends & Network */}
           <div
@@ -1848,7 +1848,7 @@ export function EditProfilePage({
                 >
                   <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} />
                   <span style={{ fontSize: '11px', fontWeight: '600', color: '#10b981' }}>
-                    {displayCurators.filter((c) => c.isOnline).length || 8} Online
+                    {friendsList.length} Connected
                   </span>
                 </div>
                 <button
@@ -1870,129 +1870,149 @@ export function EditProfilePage({
               </div>
             </div>
 
-            {/* Curators List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {displayCurators.map((curator) => (
-                <div
-                  key={curator.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '9px 12px',
-                    borderRadius: '11px',
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.025)' : '#f8fafc',
-                    border: isDark ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid #e2e8f0',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = colors.accent;
-                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.04)' : '#f1f5f9';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0';
-                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.025)' : '#f8fafc';
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                    {/* Avatar with relative online dot */}
-                    <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
-                      <img
-                        src={curator.avatarUrl}
-                        alt={curator.name}
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          backgroundColor: isDark ? colors.bgTertiary : '#e2e8f0',
-                        }}
-                      />
-                      <span
-                        style={{
-                          position: 'absolute',
-                          bottom: '-1px',
-                          right: '-1px',
-                          width: '9px',
-                          height: '9px',
-                          borderRadius: '50%',
-                          border: `2px solid ${isDark ? colors.cardBg : '#ffffff'}`,
-                          backgroundColor: curator.isOnline ? '#10b981' : '#64748b',
-                        }}
-                      />
-                    </div>
-
-                    {/* Curator Info */}
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span style={{ fontSize: '13px', fontWeight: '700', color: colors.text }}>
-                          {curator.name}
-                        </span>
-                        <span style={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#64748b' }}>
-                          @{curator.username}
-                        </span>
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          marginTop: '2px',
-                          fontSize: '11px',
-                          color:
-                            curator.contextType === 'shared-collections'
-                              ? '#a855f7'
-                              : curator.contextType === 'mutual-links'
-                              ? '#06b6d4'
-                              : colors.textTertiary,
-                        }}
-                      >
-                        {curator.contextType === 'shared-collections' ? (
-                          <Folder size={11} color="#a855f7" />
-                        ) : curator.contextType === 'mutual-links' ? (
-                          <Link2 size={11} color="#06b6d4" />
-                        ) : (
-                          <Clock size={11} color={colors.textTertiary} />
-                        )}
-                        <span>{curator.contextText}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Message Action */}
-                  <button
-                    type="button"
-                    onClick={() => showFeedback(`Chat with @${curator.username} started!`, 'info')}
+            {/* Curators List or Loading or Empty State */}
+            {isLoadingFriends ? (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: colors.textTertiary }}>
+                <Loader2 size={18} className="animate-spin" style={{ margin: '0 auto 6px', display: 'block', color: colors.accent }} />
+                <span style={{ fontSize: '12px' }}>Loading curators...</span>
+              </div>
+            ) : friendsList.length === 0 ? (
+              <div
+                style={{
+                  padding: '24px 16px',
+                  borderRadius: '12px',
+                  border: `1px dashed ${colors.border}`,
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#f8fafc',
+                  textAlign: 'center',
+                }}
+              >
+                <Users size={24} style={{ color: colors.textTertiary, margin: '0 auto 8px', display: 'block' }} />
+                <h5 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: '600', color: colors.text }}>
+                  No connected curators yet
+                </h5>
+                <p style={{ margin: 0, fontSize: '11.5px', color: colors.textTertiary, lineHeight: '1.4' }}>
+                  Invite fellow curators or friends to share public feeds and collaborate on collections.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {friendsList.map((curator) => (
+                  <div
+                    key={curator.id}
                     style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '7px',
-                      border: 'none',
-                      backgroundColor: 'transparent',
-                      color: colors.textTertiary,
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
+                      justifyContent: 'space-between',
+                      padding: '9px 12px',
+                      borderRadius: '11px',
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.025)' : '#f8fafc',
+                      border: isDark ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid #e2e8f0',
                       transition: 'all 0.15s ease',
-                      flexShrink: 0,
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.color = colors.accent;
-                      e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+                      e.currentTarget.style.borderColor = colors.accent;
+                      e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.04)' : '#f1f5f9';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.color = colors.textTertiary;
-                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0';
+                      e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.025)' : '#f8fafc';
                     }}
-                    title={`Message @${curator.username}`}
                   >
-                    <MessageSquare size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                      {/* Avatar with relative online dot */}
+                      <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
+                        <img
+                          src={curator.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${curator.username}`}
+                          alt={curator.name || curator.username}
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            backgroundColor: isDark ? colors.bgTertiary : '#e2e8f0',
+                          }}
+                        />
+                        <span
+                          style={{
+                            position: 'absolute',
+                            bottom: '-1px',
+                            right: '-1px',
+                            width: '9px',
+                            height: '9px',
+                            borderRadius: '50%',
+                            border: `2px solid ${isDark ? colors.cardBg : '#ffffff'}`,
+                            backgroundColor: '#10b981',
+                          }}
+                        />
+                      </div>
+
+                      {/* Curator Info */}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: colors.text }}>
+                            {curator.name || curator.username}
+                          </span>
+                          <span style={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#64748b' }}>
+                            @{curator.username}
+                          </span>
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            marginTop: '2px',
+                            fontSize: '11px',
+                            color: colors.textTertiary,
+                          }}
+                        >
+                          <Folder size={11} color="#a855f7" />
+                          <span>
+                            {curator.publicCollectionsCount != null
+                              ? `${curator.publicCollectionsCount} collections • ${curator.publicLinksCount || 0} links`
+                              : curator.friendsSince
+                              ? `Connected ${formatRelativeTime(curator.friendsSince)}`
+                              : 'Connected curator'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Message Action */}
+                    <button
+                      type="button"
+                      onClick={() => showFeedback(`Chat with @${curator.username} started!`, 'info')}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '7px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: colors.textTertiary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = colors.accent;
+                        e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = colors.textTertiary;
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                      title={`Message @${curator.username}`}
+                    >
+                      <MessageSquare size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Find & Invite Collaborators Button */}
             <button
