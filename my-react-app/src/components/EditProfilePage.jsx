@@ -1576,7 +1576,7 @@ export function EditProfilePage({
                       : topCollectionViews || 0}
                   </div>
                   <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : colors.textTertiary, marginTop: '4px' }}>
-                    Views
+                    TOTAL VIEWS
                   </div>
                 </div>
 
@@ -1585,7 +1585,7 @@ export function EditProfilePage({
                     {topCollectionLinksCount || 0}
                   </div>
                   <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : colors.textTertiary, marginTop: '4px' }}>
-                    Links
+                    SAVED LINKS
                   </div>
                 </div>
 
@@ -1594,7 +1594,7 @@ export function EditProfilePage({
                     {topCollection.isPublic ? 'Public' : 'Private'}
                   </div>
                   <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : colors.textTertiary, marginTop: '4px' }}>
-                    Type
+                    ACCESS TYPE
                   </div>
                 </div>
               </div>
