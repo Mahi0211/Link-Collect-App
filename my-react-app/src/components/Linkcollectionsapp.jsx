@@ -43,6 +43,7 @@ import { FilterPopover, INITIAL_FILTERS, countActiveFilters } from './FilterPopo
 import { FriendsModal } from './FriendsModal';
 import { SaveToCollectionModal } from './SaveToCollectionModal';
 import { EditProfilePage } from './EditProfilePage';
+import { ChatComingSoonPage } from './ChatComingSoonPage';
 import { getDomainName, getPageTitle, detectMediaType } from '../utils/linkUtils';
 import { api } from '../utils/api';
 
@@ -1204,6 +1205,12 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         subtitle: `${archive.length} archived bookmarks`,
       };
     }
+    if (activeView === 'chat') {
+      return {
+        title: 'Chat & Collaboration',
+        subtitle: 'Realtime chat and collaboration space (Coming soon)',
+      };
+    }
     if (activeView === 'collection') {
       const col = collections[activeCollectionId];
       const nameKey = (col?.collectionName || '').trim().toLowerCase();
@@ -1289,12 +1296,21 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         isOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         onOpenAddCollection={() => setIsAddCollectionModalOpen(true)}
-        user={{ username: currentUser?.username || currentUser?.name || 'Lionel Mahi', name: currentUser?.name || currentUser?.username || 'Lionel Mahi', email: currentUser?.email }}
+        user={{
+          username: currentUser?.username || currentUser?.name || 'Lionel Mahi',
+          name: currentUser?.name || currentUser?.username || 'Lionel Mahi',
+          email: currentUser?.email,
+          avatarUrl: currentUser?.avatarUrl,
+        }}
         onShareCollection={handleShareCollection}
         isLoading={isLoadingApi}
         onOpenFriendsModal={() => setIsFriendsModalOpen(true)}
         pendingRequestsCount={pendingRequestsCount}
         onOpenEditProfile={() => setActiveView('editProfile')}
+        onOpenChat={() => {
+          setActiveView('chat');
+          showToast('LinkCollect Realtime Chat & Collaboration is coming soon in v2.5!', 'info');
+        }}
       />
 
       {/* Main Workspace Frame */}
@@ -1307,7 +1323,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           minWidth: 0,
           height: '100vh',
           maxHeight: '100vh',
-          overflowY: activeView === 'editProfile' ? 'hidden' : 'auto',
+          overflowY: (activeView === 'editProfile' || activeView === 'chat') ? 'hidden' : 'auto',
           overflowX: 'hidden',
         }}
       >
@@ -1353,6 +1369,12 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                 setActiveView('all');
               }
             }}
+            theme={theme}
+          />
+        ) : activeView === 'chat' ? (
+          <ChatComingSoonPage
+            onBack={() => setActiveView('all')}
+            onOpenFriends={() => setIsFriendsModalOpen(true)}
             theme={theme}
           />
         ) : (

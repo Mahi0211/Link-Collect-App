@@ -7,7 +7,6 @@ import {
   Folder,
   Tag,
   Plus,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -19,7 +18,8 @@ import {
   Share2,
   Users,
   Globe,
-  Lock
+  Lock,
+  MessageSquare
 } from 'lucide-react';
 import { themes } from '../utils/themes';
 
@@ -49,10 +49,19 @@ export const Sidebar = ({
   isLoading = false,
   onOpenFriendsModal,
   pendingRequestsCount = 0,
-  onOpenEditProfile
+  onOpenEditProfile,
+  onOpenChat
 }) => {
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
+
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [user?.avatarUrl]);
+
+  const isProfileActive = activeView === 'editProfile';
+  const isChatActive = activeView === 'chat';
 
   // Responsive mobile detector
   const [isMobile, setIsMobile] = useState(() => {
@@ -311,84 +320,6 @@ export const Sidebar = ({
             })}
           </div>
 
-          {/* Social & Friends */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: '600',
-                color: colors.textTertiary,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                padding: '0 8px 6px 8px',
-              }}
-            >
-              Social
-            </span>
-
-            <button
-              onClick={() => handleItemSelect(onOpenFriendsModal)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 10px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: colors.textSecondary,
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                textAlign: 'left',
-                width: '100%',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = isDark ? '#1a1a22' : '#f1f5f9';
-                e.currentTarget.style.color = colors.text;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = colors.textSecondary;
-              }}
-            >
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
-              >
-                <Users size={16} color="#6366f1" />
-                <span>Friends & Sharing</span>
-              </div>
-              {pendingRequestsCount > 0 ? (
-                <span
-                  style={{
-                    fontSize: '10.5px',
-                    padding: '2px 7px',
-                    borderRadius: '10px',
-                    backgroundColor: '#f43f5e',
-                    color: '#ffffff',
-                    fontWeight: '700',
-                  }}
-                >
-                  {pendingRequestsCount}
-                </span>
-              ) : (
-                <span
-                  style={{
-                    fontSize: '11px',
-                    padding: '2px 6px',
-                    borderRadius: '10px',
-                    backgroundColor: isDark ? '#1f1f26' : '#f1f5f9',
-                    color: colors.textTertiary,
-                    fontWeight: '600',
-                  }}
-                >
-                  Connect
-                </span>
-              )}
-            </button>
-          </div>
-
           {/* User Collections */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <div
@@ -613,36 +544,309 @@ export const Sidebar = ({
           )}
         </div>
 
-        {/* Bottom Workspace Metrics */}
+        {/* Bottom 3-Button Quick-Access Layout (Profile, Social, Chat) */}
         <div
           style={{
             padding: '12px 14px',
             borderTop: `1px solid ${colors.borderLight}`,
             backgroundColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
+            flexShrink: 0,
           }}
         >
           <div
             style={{
-              padding: '9px 12px',
-              borderRadius: '9px',
-              backgroundColor: isDark ? '#18181f' : '#ffffff',
-              border: `1px solid ${colors.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '8px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={13} style={{ color: colors.accent }} />
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '11px', fontWeight: '600', color: colors.text }}>
-                  Smart Organize
-                </span>
-                <span style={{ fontSize: '10px', color: colors.textTertiary }}>
-                  {totalLinkCount} items indexed
+            {/* 1. Profile Button */}
+            <button
+              type="button"
+              onClick={() => handleItemSelect(onOpenEditProfile)}
+              title="Profile & Settings"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '9px 4px 7px 4px',
+                borderRadius: '12px',
+                border: isProfileActive
+                  ? `1.5px solid ${colors.accent}`
+                  : `1px solid ${isDark ? '#262633' : '#e2e8f0'}`,
+                backgroundColor: isProfileActive
+                  ? (isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(79, 70, 229, 0.12)')
+                  : (isDark ? '#16161f' : '#ffffff'),
+                color: isProfileActive ? (isDark ? '#a5b4fc' : colors.accent) : colors.textSecondary,
+                cursor: 'pointer',
+                position: 'relative',
+                outline: 'none',
+                boxShadow: isProfileActive
+                  ? (isDark ? '0 0 12px rgba(99, 102, 241, 0.25)' : '0 2px 8px rgba(79, 70, 229, 0.15)')
+                  : 'none',
+                transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isProfileActive) {
+                  e.currentTarget.style.backgroundColor = isDark ? '#1f1f2b' : '#f8fafc';
+                  e.currentTarget.style.borderColor = isDark ? '#3d3d52' : '#cbd5e1';
+                  e.currentTarget.style.color = colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isProfileActive) {
+                  e.currentTarget.style.backgroundColor = isDark ? '#16161f' : '#ffffff';
+                  e.currentTarget.style.borderColor = isDark ? '#262633' : '#e2e8f0';
+                  e.currentTarget.style.color = colors.textSecondary;
+                }
+              }}
+            >
+              <div
+                style={{
+                  position: 'relative',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '4px',
+                  flexShrink: 0,
+                }}
+              >
+                {user?.avatarUrl && !avatarFailed ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user?.name || user?.username || 'Profile'}
+                    onError={() => setAvatarFailed(true)}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      display: 'block',
+                      border: isProfileActive
+                        ? `1.5px solid ${colors.accent}`
+                        : `1px solid ${isDark ? '#3b3b4d' : '#cbd5e1'}`,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      background: `linear-gradient(135deg, ${colors.accentFrom || '#6366f1'}, ${colors.accentTo || '#8b5cf6'})`,
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      border: isProfileActive ? `1.5px solid ${colors.accent}` : 'none',
+                    }}
+                  >
+                    {(user?.name || user?.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: isProfileActive ? '600' : '500',
+                  color: isProfileActive ? (isDark ? '#e0e7ff' : colors.accent) : colors.textSecondary,
+                  letterSpacing: '-0.01em',
+                  lineHeight: '1.2',
+                }}
+              >
+                Profile
+              </span>
+            </button>
+
+            {/* 2. Social Button */}
+            <button
+              type="button"
+              onClick={() => handleItemSelect(onOpenFriendsModal)}
+              title="Friends & Social Network"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '9px 4px 7px 4px',
+                borderRadius: '12px',
+                border: `1px solid ${isDark ? '#262633' : '#e2e8f0'}`,
+                backgroundColor: isDark ? '#16161f' : '#ffffff',
+                color: colors.textSecondary,
+                cursor: 'pointer',
+                position: 'relative',
+                outline: 'none',
+                transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = isDark ? '#1f1f2b' : '#f8fafc';
+                e.currentTarget.style.borderColor = isDark ? '#3d3d52' : '#cbd5e1';
+                e.currentTarget.style.color = colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = isDark ? '#16161f' : '#ffffff';
+                e.currentTarget.style.borderColor = isDark ? '#262633' : '#e2e8f0';
+                e.currentTarget.style.color = colors.textSecondary;
+              }}
+            >
+              <div
+                style={{
+                  position: 'relative',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '4px',
+                  flexShrink: 0,
+                }}
+              >
+                <Users size={17} />
+                {pendingRequestsCount > 0 ? (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-6px',
+                      minWidth: '15px',
+                      height: '15px',
+                      padding: '0 3px',
+                      borderRadius: '8px',
+                      backgroundColor: '#f43f5e',
+                      color: '#ffffff',
+                      fontSize: '9.5px',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(244, 63, 94, 0.4)',
+                    }}
+                  >
+                    {pendingRequestsCount}
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '0px',
+                      right: '-2px',
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      backgroundColor: '#a855f7',
+                      boxShadow: '0 0 6px #a855f7',
+                    }}
+                  />
+                )}
+              </div>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  color: colors.textSecondary,
+                  letterSpacing: '-0.01em',
+                  lineHeight: '1.2',
+                }}
+              >
+                Social
+              </span>
+            </button>
+
+            {/* 3. Chat Button */}
+            <button
+              type="button"
+              onClick={() => handleItemSelect(onOpenChat)}
+              title="Chat & Direct Messaging (Coming Soon)"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '9px 4px 7px 4px',
+                borderRadius: '12px',
+                border: isChatActive
+                  ? `1.5px solid ${colors.accent}`
+                  : `1px solid ${isDark ? '#262633' : '#e2e8f0'}`,
+                backgroundColor: isChatActive
+                  ? (isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(79, 70, 229, 0.12)')
+                  : (isDark ? '#16161f' : '#ffffff'),
+                color: isChatActive ? (isDark ? '#a5b4fc' : colors.accent) : colors.textSecondary,
+                cursor: 'pointer',
+                position: 'relative',
+                outline: 'none',
+                boxShadow: isChatActive
+                  ? (isDark ? '0 0 12px rgba(99, 102, 241, 0.25)' : '0 2px 8px rgba(79, 70, 229, 0.15)')
+                  : 'none',
+                transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isChatActive) {
+                  e.currentTarget.style.backgroundColor = isDark ? '#1f1f2b' : '#f8fafc';
+                  e.currentTarget.style.borderColor = isDark ? '#3d3d52' : '#cbd5e1';
+                  e.currentTarget.style.color = colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isChatActive) {
+                  e.currentTarget.style.backgroundColor = isDark ? '#16161f' : '#ffffff';
+                  e.currentTarget.style.borderColor = isDark ? '#262633' : '#e2e8f0';
+                  e.currentTarget.style.color = colors.textSecondary;
+                }
+              }}
+            >
+              <div
+                style={{
+                  position: 'relative',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '4px',
+                  flexShrink: 0,
+                }}
+              >
+                <MessageSquare size={17} />
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-6px',
+                    minWidth: '15px',
+                    height: '15px',
+                    padding: '0 3px',
+                    borderRadius: '8px',
+                    backgroundColor: '#10b981',
+                    color: '#ffffff',
+                    fontSize: '9.5px',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 6px rgba(16, 185, 129, 0.4)',
+                  }}
+                >
+                  2
                 </span>
               </div>
-            </div>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: isChatActive ? '600' : '500',
+                  color: isChatActive ? (isDark ? '#e0e7ff' : colors.accent) : colors.textSecondary,
+                  letterSpacing: '-0.01em',
+                  lineHeight: '1.2',
+                }}
+              >
+                Chat
+              </span>
+            </button>
           </div>
         </div>
       </aside>

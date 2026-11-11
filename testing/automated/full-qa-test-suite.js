@@ -113,8 +113,8 @@ async function runFullQaSuite() {
     }
     recordTest('Sidebar', 'Quick View Selection (All Bookmarks)', allClickSuccess ? 'PASSED' : 'FAILED');
 
-    // Click Friends & Sharing button in Sidebar
-    const friendsBtn = page.locator('button:has-text("Friends & Sharing")').first();
+    // Click Social button in Sidebar
+    const friendsBtn = page.locator('button:has-text("Social"), button:has-text("Friends & Sharing")').first();
     let friendsModalOpened = false;
     if (await friendsBtn.isVisible()) {
       await friendsBtn.click({ timeout: 5000 });

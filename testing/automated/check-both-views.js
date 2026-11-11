@@ -32,3 +32,4 @@ async function checkBothViews() {
 }
 
 checkBothViews();
+
