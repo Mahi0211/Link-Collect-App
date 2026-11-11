@@ -98,6 +98,7 @@ Command: `dotnet test LinkCollect/tests/LinkCollect.IntegrationTests/LinkCollect
 | **BUG-004** | `before/BUG-004-login-input-attributes.png` | `after/BUG-004-login-input-attributes.png` | Password strength meter reacts on score 0; autofill tags present |
 | **BUG-005** | `before/BUG-005-mobile-responsive-overflow.png` | `after/BUG-005-mobile-responsive-overflow.png` | Profile page stacks vertically on 375px mobile screen without overflow |
 | **BUG-006** | `before/BUG-006-top-collection-layout.png` | `after/BUG-006-top-collection-layout.png` | Top Collection card shows title, metrics, and conditional description |
+| **BUG-007** | `before/BUG-007-double-scrollbar-before.jpg` | `after/BUG-007-single-scrollbar-fixed.png` | Eliminated redundant outside scrollbar; single sleek custom scrollbar active |
 
 ---
 
@@ -107,3 +108,4 @@ Command: `dotnet test LinkCollect/tests/LinkCollect.IntegrationTests/LinkCollect
 - **Backend API Health:** Endpoint `GET /api/health` returns status `200 OK`.
 - **Database Status:** MySQL schema healthy on port 3306; migrations up to date.
 - **Console / Runtime Errors:** 0 unhandled application errors detected during full end-to-end user flows.
+

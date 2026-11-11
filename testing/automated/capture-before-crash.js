@@ -31,3 +31,4 @@ async function captureCrash() {
   await browser.close();
 }
 captureCrash();
+

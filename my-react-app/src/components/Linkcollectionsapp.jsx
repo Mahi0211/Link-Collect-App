@@ -1307,7 +1307,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           minWidth: 0,
           height: '100vh',
           maxHeight: '100vh',
-          overflowY: 'auto',
+          overflowY: activeView === 'editProfile' ? 'hidden' : 'auto',
           overflowX: 'hidden',
         }}
       >

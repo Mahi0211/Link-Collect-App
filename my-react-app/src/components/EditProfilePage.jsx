@@ -470,7 +470,8 @@ export function EditProfilePage({
   return (
     <div
       style={{
-        minHeight: '100%',
+        flex: 1,
+        minHeight: 0,
         width: '100%',
         backgroundColor: colors.bg,
         color: colors.text,

@@ -12,7 +12,7 @@
 
 A comprehensive full-stack and UI/UX quality assurance audit was conducted across LinkCollect. Testing encompassed functional workflows, responsive viewports (Desktop 1280px, Tablet 768px, Mobile 375px), API endpoint integrity, data layer serialization, and edge-case handling.
 
-A total of **6 critical and high-impact bugs** were discovered, documented with Playwright before/after evidence, and resolved at the root cause. All automated end-to-end tests (17/17) and backend test suites (20/20) are now passing.
+A total of **7 critical and high-impact bugs** were discovered, documented with Playwright before/after evidence, and resolved at the root cause. All automated end-to-end tests (17/17) and backend test suites (20/20) are now passing.
 
 ### Severity-Wise Bug Summary
 
@@ -24,6 +24,7 @@ A total of **6 critical and high-impact bugs** were discovered, documented with 
 | **BUG-004** | **Medium** | `LoginPage.jsx` | Password strength evaluation threshold & dynamic input type disrupting credential autofill | **VERIFIED & FIXED** |
 | **BUG-005** | **Medium** | `EditProfilePage.jsx` | Rigid 60%/40% desktop grid lacking responsive stacking on tablet/mobile causing severe overflow | **VERIFIED & FIXED** |
 | **BUG-006** | **Low** | `EditProfilePage.jsx` | Top Collection card empty state handling and conditional description rendering | **VERIFIED & FIXED** |
+| **BUG-007** | **Medium** | `Linkcollectionsapp.jsx` & `EditProfilePage.jsx` | Dual vertical scrollbars on Profile view; outer container overflow creating redundant scrollbar | **VERIFIED & FIXED** |
 
 ---
 
@@ -169,12 +170,38 @@ A total of **6 critical and high-impact bugs** were discovered, documented with 
 
 ---
 
+### BUG-007: Dual Vertical Scrollbars on Profile Settings Page
+
+- **Bug ID:** BUG-007
+- **Severity:** Medium (UI/UX Flaw)
+- **Page / Component:** `my-react-app/src/components/Linkcollectionsapp.jsx` (line 1310) & `EditProfilePage.jsx` (lines 472–481)
+- **Description:**
+  On the Edit Profile page, two vertical scrollbars appeared simultaneously on the right side of the screen.
+  1. The outer scrollbar was spawned by `mainFrameRef` because it had `overflowY: 'auto'` and contained `<Header />` (height: 64px) + `<EditProfilePage />` (`minHeight: '100%'`). Total child height was `64px + 850px = 914px > 850px`, causing a 64px overflow that spawned the wider outside native scrollbar.
+  2. The inner scrollbar was spawned by `EditProfilePage` because it also had `overflowY: 'auto'`.
+  This resulted in awkward nested scrolling where moving the mouse wheel near the right edge would scroll the outside container (moving the header off-screen) rather than scrolling the profile content smoothly.
+- **Steps to Reproduce:**
+  1. Log in and open Edit Profile page.
+  2. Look at the right edge of the browser window.
+  3. Notice two vertical scrollbars side-by-side.
+- **Expected Behavior:** Exactly one vertical scrollbar on the right (the custom styled 6px scrollbar). The Header remains fixed at the top, and the profile content scrolls cleanly.
+- **Actual Behavior:** Two vertical scrollbars rendered; the outside scrollbar was large and scrolled only the header.
+- **Root Cause:** Both the parent workspace frame (`mainFrameRef`) and the child view (`EditProfilePage`) had independent `overflowY: 'auto'` declarations with flex height calculation conflicts.
+- **Screenshots:**
+  - **Before:** `testing/bug-screenshots/before/BUG-007-double-scrollbar-before.jpg`
+  - **After:** `testing/bug-screenshots/after/BUG-007-single-scrollbar-fixed.png`
+- **Fix Applied:**
+  1. Updated `mainFrameRef` in `Linkcollectionsapp.jsx` to set `overflowY: activeView === 'editProfile' ? 'hidden' : 'auto'`.
+  2. Updated `EditProfilePage.jsx` root container to `flex: 1, minHeight: 0`, allowing it to cleanly consume the remaining viewport height (`100vh - 64px`) and act as the sole scroll container.
+
+---
+
 ## Files Modified Summary
 
 1. `my-react-app/src/components/Sidebar.jsx` — Removed stray pointer event interception handlers from Quick Views and Friends & Sharing.
-2. `my-react-app/src/components/EditProfilePage.jsx` — Normalized `socialLinksJson` parsing, prevented object child crash, and added responsive column stacking.
+2. `my-react-app/src/components/EditProfilePage.jsx` — Normalized `socialLinksJson` parsing, prevented object child crash, added responsive column stacking, and resolved duplicate scrollbar layout.
 3. `my-react-app/src/components/AddLinkModal.jsx` — Standardized `getColName` to support both `.collectionName` and `.name`.
-4. `my-react-app/src/components/Linkcollectionsapp.jsx` — Added fallback for collection names in header action button and collection matching.
+4. `my-react-app/src/components/Linkcollectionsapp.jsx` — Added fallback for collection names, and scoped `overflowY: 'hidden'` during Edit Profile view.
 5. `my-react-app/src/components/LoginPage.jsx` — Fixed password strength scale for score 0 and added standard form attributes.
 6. `my-react-app/src/components/FriendsModal.jsx` — Added `title="Close"` and `aria-label="Close modal"` to modal close button.
 7. `my-react-app/src/index.css` — Added responsive rules for `.edit-profile-layout-grid`.
@@ -186,3 +213,4 @@ A total of **6 critical and high-impact bugs** were discovered, documented with 
 All fixes were compiled via `vite build` and verified with genuine before/after screenshots stored under:
 - `testing/bug-screenshots/before/`
 - `testing/bug-screenshots/after/`
+
