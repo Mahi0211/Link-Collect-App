@@ -1477,7 +1477,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   }}
                 >
                   <Plus size={15} />
-                  <span>Add to {activeView === 'collection' ? collections[activeCollectionId]?.collectionName : 'Collection'}</span>
+                  <span>Add to {activeView === 'collection' ? (collections[activeCollectionId]?.collectionName || collections[activeCollectionId]?.name || 'Collection') : 'Collection'}</span>
                 </button>
               )}
 

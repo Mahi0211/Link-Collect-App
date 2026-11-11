@@ -38,6 +38,36 @@ import {
 import { themes } from '../utils/themes';
 import { api } from '../utils/api';
 
+const parseSocialLinks = (raw) => {
+  if (!raw) return {};
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (Array.isArray(parsed)) {
+      const dict = {};
+      parsed.forEach((item) => {
+        if (item && typeof item === 'object') {
+          const key = (item.platform || item.name || 'social').toLowerCase().replace(/[^a-z0-9]/g, '');
+          dict[key] = item.handle || item.url || item.value || '';
+        } else if (typeof item === 'string') {
+          dict[item] = item;
+        }
+      });
+      return dict;
+    } else if (parsed && typeof parsed === 'object') {
+      const dict = {};
+      Object.entries(parsed).forEach(([k, v]) => {
+        if (typeof v === 'object' && v !== null) {
+          dict[k] = v.handle || v.url || v.value || JSON.stringify(v);
+        } else {
+          dict[k] = String(v ?? '');
+        }
+      });
+      return dict;
+    }
+  } catch {}
+  return {};
+};
+
 export function EditProfilePage({
   user,
   collections = [],
@@ -50,6 +80,18 @@ export function EditProfilePage({
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
 
+  // Responsive mobile/tablet check
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => {
+    if (typeof window !== 'undefined') return window.innerWidth < 1024;
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileOrTablet(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Form state (loaded strictly from user DB record)
   const [name, setName] = useState(user?.name || '');
   const [username, setUsername] = useState(user?.username || '');
@@ -61,15 +103,7 @@ export function EditProfilePage({
   const [coverUrl, setCoverUrl] = useState(user?.coverUrl || '');
 
   // Social Links state (parsed from user.socialLinksJson or empty)
-  const [socialLinks, setSocialLinks] = useState(() => {
-    if (user?.socialLinksJson) {
-      try {
-        const parsed = JSON.parse(user.socialLinksJson);
-        if (parsed && typeof parsed === 'object') return parsed;
-      } catch {}
-    }
-    return {};
-  });
+  const [socialLinks, setSocialLinks] = useState(() => parseSocialLinks(user?.socialLinksJson));
 
   // UI state
   const [isSaving, setIsSaving] = useState(false);
@@ -201,16 +235,7 @@ export function EditProfilePage({
     setBio(user?.bio || '');
     setAvatarUrl(user?.avatarUrl || '');
     setCoverUrl(user?.coverUrl || '');
-    if (user?.socialLinksJson) {
-      try {
-        const parsed = JSON.parse(user.socialLinksJson);
-        setSocialLinks(parsed && typeof parsed === 'object' ? parsed : {});
-      } catch {
-        setSocialLinks({});
-      }
-    } else {
-      setSocialLinks({});
-    }
+    setSocialLinks(parseSocialLinks(user?.socialLinksJson));
     showFeedback('Changes discarded.', 'info');
   };
 
@@ -916,12 +941,12 @@ export function EditProfilePage({
         </div>
       </div>
 
-      {/* MAIN TWO-COLUMN CONTENT GRID (60% Left / 40% Right) */}
+      {/* MAIN TWO-COLUMN CONTENT GRID (60% Left / 40% Right on Desktop, stacked on Mobile/Tablet) */}
       <div
         className="edit-profile-layout-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)',
+          gridTemplateColumns: isMobileOrTablet ? '1fr' : 'minmax(0, 3fr) minmax(0, 2fr)',
           gap: '24px',
           alignItems: 'start',
         }}
@@ -1363,41 +1388,46 @@ export function EditProfilePage({
               >
                 {Object.entries(socialLinks)
                   .filter(([_, val]) => Boolean(val))
-                  .map(([key, handle]) => (
-                    <div
-                      key={key}
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: '10px',
-                        backgroundColor: isDark ? colors.bgSecondary : '#f8fafc',
-                        border: `1px solid ${colors.border}`,
-                        position: 'relative',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '600', color: colors.text }}>
-                          {formatPlatformName(key)}
-                        </span>
-                        <span style={{ fontSize: '10px', fontWeight: '600', color: '#10b981', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} /> Active
-                        </span>
+                  .map(([key, val]) => {
+                    const handleText = typeof val === 'object' && val !== null
+                      ? (val.handle || val.url || val.value || JSON.stringify(val))
+                      : String(val);
+                    return (
+                      <div
+                        key={key}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: '10px',
+                          backgroundColor: isDark ? colors.bgSecondary : '#f8fafc',
+                          border: `1px solid ${colors.border}`,
+                          position: 'relative',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '600', color: colors.text }}>
+                            {formatPlatformName(key)}
+                          </span>
+                          <span style={{ fontSize: '10px', fontWeight: '600', color: '#10b981', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} /> Active
+                          </span>
+                        </div>
+                        <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#818cf8', fontWeight: '500', wordBreak: 'break-all' }}>
+                          {handleText}
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: colors.textTertiary }}>
+                          <span>{getPlatformSubtext(key)}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSocial(key)}
+                            style={{ background: 'none', border: 'none', padding: 0, color: colors.textTertiary, cursor: 'pointer' }}
+                            title="Disconnect"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
-                      <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#818cf8', fontWeight: '500', wordBreak: 'break-all' }}>
-                        {handle}
-                      </p>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: colors.textTertiary }}>
-                        <span>{getPlatformSubtext(key)}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSocial(key)}
-                          style={{ background: 'none', border: 'none', padding: 0, color: colors.textTertiary, cursor: 'pointer' }}
-                          title="Disconnect"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             )}
 

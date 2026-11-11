@@ -282,10 +282,8 @@ export const Sidebar = ({
                   }}
                 >
                   <div
-            onClick={onOpenEditProfile}
-            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: onOpenEditProfile ? 'pointer' : 'default' }}
-            title={onOpenEditProfile ? 'Edit Profile & Settings' : undefined}
-          >
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+                  >
                     <Icon
                       size={16}
                       style={{
@@ -356,10 +354,8 @@ export const Sidebar = ({
               }}
             >
               <div
-            onClick={onOpenEditProfile}
-            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: onOpenEditProfile ? 'pointer' : 'default' }}
-            title={onOpenEditProfile ? 'Edit Profile & Settings' : undefined}
-          >
+                style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+              >
                 <Users size={16} color="#6366f1" />
                 <span>Friends & Sharing</span>
               </div>

@@ -1,0 +1,129 @@
+{
+  "total": 17,
+  "passed": 17,
+  "failed": 0,
+  "results": [
+    {
+      "suite": "Authentication",
+      "testName": "Password Strength Meter - Weak State",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:09.136Z"
+    },
+    {
+      "suite": "Authentication",
+      "testName": "Password Strength Meter - Strong State",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:09.471Z"
+    },
+    {
+      "suite": "Authentication",
+      "testName": "Invalid Credentials Validation Banner",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:11.067Z"
+    },
+    {
+      "suite": "Authentication",
+      "testName": "Valid Login for Lionel Mahi",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:13.179Z"
+    },
+    {
+      "suite": "Sidebar",
+      "testName": "Quick View Selection (Favorites) without Pointer Interception",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:13.257Z"
+    },
+    {
+      "suite": "Sidebar",
+      "testName": "Quick View Selection (All Bookmarks)",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:13.308Z"
+    },
+    {
+      "suite": "Sidebar",
+      "testName": "Friends & Sharing Modal Trigger (BUG-001 Fix)",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:14.678Z"
+    },
+    {
+      "suite": "Collections",
+      "testName": "Create New Collection in Workspace",
+      "status": "PASSED",
+      "details": "QA Verified 4678",
+      "timestamp": "2026-11-11T10:23:16.785Z"
+    },
+    {
+      "suite": "Links",
+      "testName": "Add Link Modal Pre-selected Collection (BUG-003 Fix)",
+      "status": "PASSED",
+      "details": "Selected: \"newest\"",
+      "timestamp": "2026-11-11T10:23:18.498Z"
+    },
+    {
+      "suite": "Links",
+      "testName": "Create Link via New Link Modal",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:20.043Z"
+    },
+    {
+      "suite": "Profile",
+      "testName": "Navigate to Profile & Account Settings",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:22.228Z"
+    },
+    {
+      "suite": "Profile",
+      "testName": "Social Profiles Loaded with Normalized JSON (BUG-002 Fix)",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:22.228Z"
+    },
+    {
+      "suite": "Profile",
+      "testName": "Top Collection Card Rendered Correctly",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:22.228Z"
+    },
+    {
+      "suite": "Profile",
+      "testName": "Friends & Network Section Rendered from DB",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:22.228Z"
+    },
+    {
+      "suite": "Responsive",
+      "testName": "Desktop Viewport (1280px) 60/40 Grid Layout",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:22.642Z"
+    },
+    {
+      "suite": "Responsive",
+      "testName": "Tablet Viewport (768px) Responsive Stacking",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:23.131Z"
+    },
+    {
+      "suite": "Responsive",
+      "testName": "Mobile Viewport (375px) Responsive Stacking (BUG-005 Fix)",
+      "status": "PASSED",
+      "details": "",
+      "timestamp": "2026-11-11T10:23:23.618Z"
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  ]
+}

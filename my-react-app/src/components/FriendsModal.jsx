@@ -212,6 +212,8 @@ export const FriendsModal = ({
 
           <button
             onClick={onClose}
+            title="Close"
+            aria-label="Close modal"
             style={{
               background: 'none',
               border: 'none',

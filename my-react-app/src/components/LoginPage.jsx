@@ -33,6 +33,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
     if (/[^A-Za-z0-9]/.test(pass)) score += 1;
 
     switch (score) {
+      case 0:
       case 1:
         return { score: 1, label: 'Weak', color: '#ef4444' };
       case 2:
@@ -42,7 +43,7 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
       case 4:
         return { score: 4, label: 'Strong', color: '#10b981' };
       default:
-        return { score: 0, label: '', color: '' };
+        return { score: 1, label: 'Weak', color: '#ef4444' };
     }
   };
 
@@ -366,6 +367,8 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
               />
               <input
                 type={mode === 'create' ? 'email' : 'text'}
+                name={mode === 'create' ? 'email' : 'identifier'}
+                autoComplete={mode === 'create' ? 'email' : 'username'}
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -418,6 +421,8 @@ export function LoginPage({ data, onLoginSuccess, theme = 'dark' }) {
               />
               <input
                 type={showPassword ? 'text' : 'password'}
+                name="password"
+                autoComplete={mode === 'create' ? 'new-password' : 'current-password'}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);

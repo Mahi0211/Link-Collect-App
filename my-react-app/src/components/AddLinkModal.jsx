@@ -36,7 +36,9 @@ export const AddLinkModal = ({
   const colors = themes[theme];
   const isDark = theme === 'dark';
 
-  const defaultCollection = collections[activeCollectionIndex]?.collectionName || collections[0]?.name || 'General';
+  const getColName = (c) => c?.collectionName || c?.name || 'General';
+  const activeCol = collections[activeCollectionIndex];
+  const defaultCollection = activeCol ? getColName(activeCol) : (collections[0] ? getColName(collections[0]) : 'General');
 
   const [url, setUrl] = useState(initialUrl);
   const [title, setTitle] = useState(initialTitle);
@@ -388,11 +390,14 @@ export const AddLinkModal = ({
                 cursor: 'pointer',
               }}
             >
-              {collections.map((c, i) => (
-                <option key={i} value={c.collectionName}>
-                  {c.collectionName}
-                </option>
-              ))}
+              {collections.map((c, i) => {
+                const cName = getColName(c);
+                return (
+                  <option key={c.id || i} value={cName}>
+                    {cName}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
