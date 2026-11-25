@@ -633,8 +633,54 @@ export const LinkCard = ({
   }
 
   // ==========================================
-  // MODERN GRID CARD VIEW WITH RICH THUMBNAIL
+  // MODERN GRID CARD VIEW WITH UNOBSTRUCTED THUMBNAIL
   // ==========================================
+  const quickHeaderActions = [
+    {
+      key: 'watched',
+      onClick: handleWatchedClick,
+      isActive: watched,
+      activeColor: colors.watched,
+      activeBg: colors.watchedLight,
+      title: watched ? `Watched (${watchCount}x)` : 'Mark as Watched',
+      icon: <CheckCircle size={15} />,
+    },
+    {
+      key: 'favorite',
+      onClick: handleFavoriteClick,
+      isActive: isFavorite,
+      activeColor: colors.favorite,
+      activeBg: colors.favoriteLight,
+      title: isFavorite ? 'Favorited' : 'Add to Favorites',
+      icon: <Heart size={15} fill={isFavorite ? colors.favorite : 'none'} />,
+    },
+    {
+      key: 'readLater',
+      onClick: handleReadLaterClick,
+      isActive: isReadLater,
+      activeColor: colors.readLater,
+      activeBg: colors.readLaterLight,
+      title: isReadLater ? 'In Read Later' : 'Read Later',
+      icon: <Clock size={15} fill={isReadLater ? colors.readLater : 'none'} />,
+    },
+    ...(onShowQr
+      ? [
+          {
+            key: 'qr',
+            onClick: (e) => {
+              e.stopPropagation();
+              onShowQr(itemPayload);
+            },
+            isActive: false,
+            activeColor: colors.accent,
+            activeBg: colors.accentLight,
+            title: 'Scan QR Code',
+            icon: <QrCode size={15} />,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div
       onClick={() => !isReadOnly && onInspect && onInspect(itemPayload)}
@@ -663,17 +709,176 @@ export const LinkCard = ({
         e.currentTarget.style.borderColor = colors.border;
       }}
     >
-      {/* Top Banner / Live Thumbnail Area */}
+      {/* Top Toolbar Header: Checkbox + Badge Pill (left) & Action Icons (right) — never covers thumbnail */}
       <div
         style={{
-          height: '130px',
+          padding: '10px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+        }}
+      >
+        {/* Left: Multi-select Checkbox + Compact Source Pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          {!isReadOnly && onToggleSelect && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelect();
+              }}
+              aria-label={isSelected ? 'Deselect link' : 'Select link'}
+              style={{
+                width: '26px',
+                height: '26px',
+                borderRadius: '7px',
+                border: isSelected ? `1px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                backgroundColor: isSelected ? colors.accent : 'transparent',
+                color: isSelected ? '#ffffff' : colors.textTertiary,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.borderColor = colors.accent;
+                  e.currentTarget.style.color = colors.text;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.borderColor = colors.border;
+                  e.currentTarget.style.color = colors.textTertiary;
+                }
+              }}
+              title={isSelected ? 'Deselect link' : 'Select link'}
+            >
+              {isSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+            </button>
+          )}
+
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '3px 9px',
+              borderRadius: '9999px',
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9',
+              color: colors.textSecondary,
+              fontSize: '10.5px',
+              fontWeight: '600',
+              letterSpacing: '0.03em',
+              textTransform: 'uppercase',
+              border: `1px solid ${colors.border}`,
+              maxWidth: '130px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={preview.badge || domain}
+          >
+            <Globe size={11} style={{ flexShrink: 0, opacity: 0.8 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {preview.badge || domain}
+            </span>
+          </span>
+        </div>
+
+        {/* Right: Quick Action Controls */}
+        {!isReadOnly && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+            {quickHeaderActions.map((act) => (
+              <button
+                key={act.key}
+                type="button"
+                onClick={act.onClick}
+                aria-label={act.title}
+                title={act.title}
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '7px',
+                  border: act.isActive ? `1px solid ${act.activeColor}40` : '1px solid transparent',
+                  backgroundColor: act.isActive ? act.activeBg : 'transparent',
+                  color: act.isActive ? act.activeColor : colors.textSecondary,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!act.isActive) {
+                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.07)' : '#f1f5f9';
+                    e.currentTarget.style.color = colors.text;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!act.isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = colors.textSecondary;
+                  }
+                }}
+              >
+                {act.icon}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Larger, Clean, Unobstructed 16:9 Thumbnail Area */}
+      <div
+        style={{
           width: '100%',
+          aspectRatio: '16 / 9',
+          minHeight: '168px',
+          maxHeight: '220px',
           position: 'relative',
           overflow: 'hidden',
+          borderTop: `1px solid ${colors.borderLight}`,
+          borderBottom: `1px solid ${colors.borderLight}`,
           background: preview.gradient || 'linear-gradient(135deg, #18181b 0%, #27272a 100%)',
         }}
       >
-        {/* Actual Saved OpenGraph / Fallback Screenshot Thumbnail */}
+        {/* Subtle fallback monogram when image is unavailable or loading */}
+        {(!imgSrc || thumbnailError || !thumbnailLoaded) && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '14px',
+                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '20px',
+                fontWeight: '700',
+                color: 'rgba(255, 255, 255, 0.85)',
+              }}
+            >
+              {domain.charAt(0).toUpperCase()}
+            </div>
+          </div>
+        )}
+
+        {/* Saved OpenGraph / Fallback Screenshot Thumbnail */}
         {imgSrc && !thumbnailError && (
           <img
             ref={imgRef}
@@ -696,223 +901,47 @@ export const LinkCard = ({
               objectFit: 'cover',
               objectPosition: (preview.isCustomThumbnail && imgSrc === preview.thumbnailUrl) ? 'center' : 'top center',
               opacity: thumbnailLoaded ? 1 : 0,
-              transition: 'opacity 0.3s ease, transform 0.4s ease',
+              transition: 'opacity 0.25s ease, transform 0.35s ease',
             }}
           />
         )}
 
-        {/* Subtle Dark Gradient Overlay for text readability */}
+        {/* Light bottom-only scrim for pill legibility — leaves top & center unobstructed */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.35) 100%)',
+            background: 'linear-gradient(to top, rgba(0, 0, 0, 0.48) 0%, transparent 45%)',
             pointerEvents: 'none',
           }}
         />
 
-        {/* Top Badges: Domain Pill & Quick Action Controls */}
+        {/* Bottom Banner Status & Reading Time Pills */}
         <div
           style={{
             position: 'absolute',
-            top: '10px',
+            bottom: '10px',
             left: '10px',
             right: '10px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            zIndex: 3,
+            gap: '8px',
+            zIndex: 2,
           }}
         >
-          {/* Left Pill Group: Checkbox + Domain Pill */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {!isReadOnly && onToggleSelect && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleSelect();
-                }}
-                style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  border: isSelected ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.25)',
-                  backgroundColor: isSelected ? '#6366f1' : 'rgba(0, 0, 0, 0.65)',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backdropFilter: 'blur(6px)',
-                  WebkitBackdropFilter: 'blur(6px)',
-                  transition: 'transform 0.15s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                title={isSelected ? 'Deselect link' : 'Select link'}
-              >
-                {isSelected ? <CheckSquare size={15} /> : <Square size={15} />}
-              </button>
-            )}
-
-            {/* Domain Pill */}
-            <span
-              style={{
-                padding: '3px 8px',
-                borderRadius: '6px',
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                color: '#ffffff',
-                fontSize: '10.5px',
-                fontWeight: '600',
-                letterSpacing: '0.02em',
-                textTransform: 'uppercase',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-              }}
-            >
-              {preview.badge || domain}
-            </span>
-          </div>
-
-          {/* Quick Action Floating Controls - only for personal links */}
-          {!isReadOnly && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {/* Watched Toggle Button */}
-              <button
-                onClick={handleWatchedClick}
-                style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  backgroundColor: watched ? 'rgba(16, 185, 129, 0.95)' : 'rgba(0, 0, 0, 0.65)',
-                  backdropFilter: 'blur(6px)',
-                  WebkitBackdropFilter: 'blur(6px)',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'transform 0.15s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                title={watched ? `Watched (${watchCount}x)` : 'Mark as Watched'}
-              >
-                <CheckCircle size={14} />
-              </button>
-
-              {/* Heart Favorite Toggle */}
-              <button
-                onClick={handleFavoriteClick}
-                style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  backgroundColor: isFavorite ? 'rgba(244, 63, 94, 0.95)' : 'rgba(0, 0, 0, 0.65)',
-                  backdropFilter: 'blur(6px)',
-                  WebkitBackdropFilter: 'blur(6px)',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'transform 0.15s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                title={isFavorite ? 'Favorited' : 'Add to Favorites'}
-              >
-                <Heart size={14} fill={isFavorite ? '#ffffff' : 'none'} />
-              </button>
-
-              {/* Read Later Toggle */}
-              <button
-                onClick={handleReadLaterClick}
-                style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  backgroundColor: isReadLater ? 'rgba(2, 132, 199, 0.95)' : 'rgba(0, 0, 0, 0.65)',
-                  backdropFilter: 'blur(6px)',
-                  WebkitBackdropFilter: 'blur(6px)',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'transform 0.15s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                title={isReadLater ? 'In Read Later' : 'Read Later'}
-              >
-                <Clock size={14} fill={isReadLater ? '#ffffff' : 'none'} />
-              </button>
-
-              {/* QR Code Button */}
-              {onShowQr && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onShowQr(itemPayload);
-                  }}
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-                    backdropFilter: 'blur(6px)',
-                    WebkitBackdropFilter: 'blur(6px)',
-                    color: '#ffffff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'transform 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  title="Scan QR Code"
-                >
-                  <QrCode size={14} />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Bottom Banner Status Badges */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '8px',
-            left: '10px',
-            right: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            zIndex: 3,
-          }}
-        >
-          {/* Status Badges - hidden for friend collections */}
           {!isReadOnly && rewatchWorthy ? (
             <span
               style={{
                 fontSize: '10.5px',
                 fontWeight: '700',
-                padding: '2px 7px',
-                borderRadius: '5px',
-                backgroundColor: 'rgba(249, 115, 22, 0.9)',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(249, 115, 22, 0.92)',
                 color: '#ffffff',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '4px',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
               }}
               className="animate-flame-pulse"
@@ -925,13 +954,14 @@ export const LinkCard = ({
               style={{
                 fontSize: '10.5px',
                 fontWeight: '600',
-                padding: '2px 6px',
-                borderRadius: '5px',
-                backgroundColor: 'rgba(16, 185, 129, 0.9)',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(16, 185, 129, 0.92)',
                 color: '#ffffff',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '4px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
               }}
             >
               <CheckCircle size={11} />
@@ -941,13 +971,22 @@ export const LinkCard = ({
 
           <span
             style={{
-              fontSize: '10.5px',
-              color: 'rgba(255, 255, 255, 0.95)',
-              fontWeight: '500',
-              textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '4px 9px',
+              borderRadius: '7px',
+              backgroundColor: 'rgba(15, 15, 20, 0.78)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              fontSize: '11px',
+              color: '#ffffff',
+              fontWeight: '600',
             }}
           >
-            {readingTime}
+            <BookOpen size={11} style={{ opacity: 0.9 }} />
+            <span>{readingTime}</span>
           </span>
         </div>
       </div>
@@ -955,29 +994,29 @@ export const LinkCard = ({
       {/* Card Content Body */}
       <div
         style={{
-          padding: '14px',
+          padding: '14px 16px 16px 16px',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
           flex: 1,
-          gap: '10px',
+          gap: '12px',
         }}
       >
-        <div>
-          {/* Header Row: Favicon + Domain + Interactive Stars */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Domain Row: Favicon + Domain + Interactive Stars */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
               <div
                 style={{
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '4px',
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '6px',
                   backgroundColor: isDark ? '#272730' : '#f1f5f9',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   overflow: 'hidden',
                   flexShrink: 0,
+                  border: `1px solid ${colors.borderLight}`,
                 }}
               >
                 {faviconUrl && !imageError ? (
@@ -996,21 +1035,22 @@ export const LinkCard = ({
 
               <span
                 style={{
-                  fontSize: '11.5px',
+                  fontSize: '12px',
+                  fontWeight: '500',
                   color: colors.textSecondary,
                   fontFamily: 'var(--font-mono)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}
+                title={domain}
               >
                 {domain}
               </span>
             </div>
 
-            {/* 5-Star Rating component - only for personal links */}
             {!isReadOnly && (
-              <div onClick={(e) => e.stopPropagation()}>
+              <div onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
                 <StarRating
                   rating={rating}
                   onRate={handleStarRate}
@@ -1025,17 +1065,17 @@ export const LinkCard = ({
           {/* Title */}
           <h3
             style={{
-              fontSize: '14px',
+              fontSize: '14.5px',
               fontWeight: '600',
               color: colors.text,
-              margin: '0 0 6px 0',
+              margin: 0,
               lineHeight: '1.4',
               display: '-webkit-box',
               WebkitLineClamp: '2',
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
-              minHeight: '38px',
             }}
+            title={title}
           >
             {title}
           </h3>
@@ -1049,9 +1089,8 @@ export const LinkCard = ({
                 color: colors.textSecondary,
                 backgroundColor: isDark ? 'rgba(251, 191, 36, 0.08)' : 'rgba(245, 158, 11, 0.08)',
                 borderLeft: `2px solid ${colors.rating}`,
-                padding: '4px 8px',
+                padding: '5px 8px',
                 borderRadius: '0 6px 6px 0',
-                marginBottom: '8px',
                 display: '-webkit-box',
                 WebkitLineClamp: '2',
                 WebkitBoxOrient: 'vertical',
@@ -1062,19 +1101,20 @@ export const LinkCard = ({
             </div>
           )}
 
-          {/* Collection Name Row with Public/Private Chip on the same line (right end) */}
+          {/* Collection Pill & Visibility Chip Row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
               {collectionName && (
                 <span
                   style={{
-                    fontSize: '10.5px',
+                    fontSize: '11.5px',
                     fontWeight: '500',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    backgroundColor: isDark ? '#1a1a22' : '#f1f5f9',
-                    color: colors.textTertiary,
-                    maxWidth: '180px',
+                    padding: '4px 10px',
+                    borderRadius: '7px',
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9',
+                    color: colors.textSecondary,
+                    border: `1px solid ${colors.borderLight}`,
+                    maxWidth: '170px',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -1087,11 +1127,12 @@ export const LinkCard = ({
               {notes && (
                 <span
                   style={{
-                    fontSize: '10.5px',
+                    fontSize: '11px',
                     color: colors.accent,
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '2px',
+                    fontWeight: '500',
                   }}
                 >
                   • has notes
@@ -1099,7 +1140,6 @@ export const LinkCard = ({
               )}
             </div>
 
-            {/* Public / Private Chip on the same line as collection name */}
             <div>
               {!isReadOnly && onTogglePublic ? (
                 <button
@@ -1109,17 +1149,17 @@ export const LinkCard = ({
                     onTogglePublic();
                   }}
                   style={{
-                    padding: '2.5px 8px',
-                    borderRadius: '5px',
-                    backgroundColor: isPublic ? 'rgba(16, 185, 129, 0.15)' : (isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'),
-                    color: isPublic ? '#10b981' : colors.textTertiary,
-                    fontSize: '10.5px',
+                    padding: '4px 10px',
+                    borderRadius: '7px',
+                    backgroundColor: isPublic ? 'rgba(16, 185, 129, 0.15)' : (isDark ? 'rgba(255, 255, 255, 0.04)' : '#f1f5f9'),
+                    color: isPublic ? '#10b981' : colors.textSecondary,
+                    fontSize: '11.5px',
                     fontWeight: '600',
                     border: isPublic ? '1px solid rgba(16, 185, 129, 0.35)' : `1px solid ${colors.border}`,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px',
+                    gap: '5px',
                     transition: 'all 0.15s ease',
                   }}
                   title={isPublic ? 'Public: Visible to approved friends (Click to make Private)' : 'Private: Only visible to you (Click to make Public)'}
@@ -1130,16 +1170,16 @@ export const LinkCard = ({
               ) : isPublic ? (
                 <span
                   style={{
-                    padding: '2.5px 8px',
-                    borderRadius: '5px',
+                    padding: '4px 10px',
+                    borderRadius: '7px',
                     backgroundColor: 'rgba(16, 185, 129, 0.15)',
                     color: '#10b981',
-                    fontSize: '10.5px',
+                    fontSize: '11.5px',
                     fontWeight: '600',
                     border: '1px solid rgba(16, 185, 129, 0.35)',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px',
+                    gap: '5px',
                   }}
                 >
                   <Globe size={11} />
@@ -1150,15 +1190,16 @@ export const LinkCard = ({
           </div>
         </div>
 
-        {/* Card Footer: Quick Copy & External Open OR Save to My Collection & Visit for friend */}
+        {/* Card Footer: Balanced Copy Button & Visit CTA */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             borderTop: `1px solid ${colors.borderLight}`,
-            paddingTop: '10px',
-            marginTop: '4px',
+            paddingTop: '12px',
+            marginTop: 'auto',
+            gap: '8px',
           }}
         >
           {isReadOnly ? (
@@ -1173,20 +1214,20 @@ export const LinkCard = ({
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '5px',
-                    fontSize: '11.5px',
+                    gap: '6px',
+                    fontSize: '12px',
                     fontWeight: '600',
                     color: colors.accent,
                     backgroundColor: colors.accentLight,
                     border: `1px solid ${colors.borderActive}35`,
-                    padding: '5px 11px',
-                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
                   title="Save to My Collection"
                 >
-                  <BookmarkPlus size={13} />
+                  <BookmarkPlus size={14} />
                   <span>Save to My Collection</span>
                 </button>
               )}
@@ -1199,13 +1240,13 @@ export const LinkCard = ({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  fontSize: '11.5px',
+                  gap: '6px',
+                  fontSize: '12px',
                   fontWeight: '600',
                   color: '#ffffff',
                   textDecoration: 'none',
-                  padding: '5px 12px',
-                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
                   background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
                   boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
                   transition: 'all 0.15s ease',
@@ -1213,26 +1254,43 @@ export const LinkCard = ({
                 title="Open in new window"
               >
                 <span>Visit</span>
-                <ExternalLink size={12} strokeWidth={2.2} />
+                <ExternalLink size={13} strokeWidth={2.2} />
               </a>
             </div>
           ) : (
             <>
-              {/* Quick Copy Link */}
               <button
+                type="button"
                 onClick={handleCopy}
                 style={{
-                  background: 'none',
-                  border: 'none',
+                  backgroundColor: copied
+                    ? (isDark ? 'rgba(16, 185, 129, 0.14)' : 'rgba(16, 185, 129, 0.1)')
+                    : (isDark ? 'rgba(255, 255, 255, 0.04)' : '#f8fafc'),
+                  border: copied
+                    ? '1px solid rgba(16, 185, 129, 0.35)'
+                    : `1px solid ${colors.border}`,
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '11.5px',
-                  color: copied ? colors.success : colors.textTertiary,
-                  padding: '4px 6px',
-                  borderRadius: '6px',
+                  gap: '6px',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: copied ? colors.success : colors.textSecondary,
+                  padding: '6px 12px',
+                  borderRadius: '8px',
                   transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!copied) {
+                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9';
+                    e.currentTarget.style.color = colors.text;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!copied) {
+                    e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.04)' : '#f8fafc';
+                    e.currentTarget.style.color = colors.textSecondary;
+                  }
                 }}
                 title="Copy URL"
               >
@@ -1240,7 +1298,6 @@ export const LinkCard = ({
                 <span>{copied ? 'Copied!' : 'Copy'}</span>
               </button>
 
-              {/* External Direct Visit Button */}
               <a
                 href={url}
                 target="_blank"
@@ -1252,13 +1309,13 @@ export const LinkCard = ({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  fontSize: '11.5px',
+                  gap: '6px',
+                  fontSize: '12px',
                   fontWeight: '600',
                   color: '#ffffff',
                   textDecoration: 'none',
-                  padding: '5px 10px',
-                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
                   background: 'linear-gradient(135deg, #6661f1 0%, #793fed 100%)',
                   boxShadow: '0 2px 8px rgba(102, 97, 241, 0.35)',
                   transition: 'all 0.15s ease',

@@ -179,6 +179,37 @@ async function runThumbnailVerification() {
 
     await cardImg.scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
+
+    // Verify larger unobstructed thumbnail layout: thumbnail height >= 165px and no top action buttons overlapping the image
+    const layoutMetrics = await page.evaluate((src) => {
+      const img = document.querySelector(`main img[src="${src}"]`);
+      if (!img) return null;
+      const imgRect = img.getBoundingClientRect();
+      const card = img.closest('div[style*="border-radius: 14px"]');
+      const headerButtons = card ? Array.from(card.querySelectorAll('button[aria-label]')) : [];
+      const overlappingButtons = headerButtons.filter((btn) => {
+        const r = btn.getBoundingClientRect();
+        return r.bottom > imgRect.top + 2 && r.top < imgRect.bottom;
+      });
+      return {
+        imgWidth: Math.round(imgRect.width),
+        imgHeight: Math.round(imgRect.height),
+        headerButtonCount: headerButtons.length,
+        overlappingCount: overlappingButtons.length,
+      };
+    }, expectedThumbUrl);
+
+    assert(
+      'Card thumbnail is larger (>= 165px height) and action buttons do not overlap thumbnail',
+      Boolean(
+        layoutMetrics &&
+        layoutMetrics.imgHeight >= 165 &&
+        layoutMetrics.headerButtonCount >= 4 &&
+        layoutMetrics.overlappingCount === 0
+      ),
+      layoutMetrics ? JSON.stringify(layoutMetrics) : 'missing metrics'
+    );
+
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'THUMB-002-card-renders-og-thumbnail.png') });
 
     // 3. Verify Detail Drawer banner shows the same saved og:image
