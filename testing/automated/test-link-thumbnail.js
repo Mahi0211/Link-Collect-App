@@ -233,6 +233,21 @@ async function runThumbnailVerification() {
       (await persistedCardImg.getAttribute('src')) === expectedThumbUrl
     );
 
+    // 4b. Verify Surprise Me modal renders a visible URL thumbnail
+    const surpriseBtn = page.locator('header button:has-text("Surprise Me")').first();
+    if (await surpriseBtn.isVisible()) {
+      await surpriseBtn.click();
+      await page.locator('button:has-text("Shuffle"):not([disabled])').waitFor({ state: 'visible', timeout: 5000 });
+      const modalImg = page.locator('.aspect-video img').last();
+      await modalImg.waitFor({ state: 'attached', timeout: 5000 });
+      await page.waitForTimeout(800);
+      const modalImgSrc = await modalImg.getAttribute('src');
+      assert('Surprise Me modal renders URL thumbnail banner', Boolean(modalImgSrc), modalImgSrc || 'missing');
+      await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'SURPRISE-001-thumbnail-preview.png') });
+      const closeSurprise = page.locator('button[aria-label="Close Surprise Me"]').first();
+      if (await closeSurprise.isVisible()) await closeSurprise.click();
+    }
+
     // 5. Verify direct API POST /api/links without thumbnailUrl auto-scrapes server-side
     const directRes = await page.evaluate(async ({ token, url }) => {
       const r = await fetch('/api/links', {

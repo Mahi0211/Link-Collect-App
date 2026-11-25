@@ -2418,6 +2418,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         links={allLinks}
         onMarkRead={handleToggleWatched}
         onOpenDetail={(it) => setDrawerItem(it)}
+        onBackfillThumbnail={handleBackfillThumbnail}
       />
 
       {/* 1-Click Bookmarklet Instructions */}
