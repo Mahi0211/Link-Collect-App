@@ -142,8 +142,13 @@ export const KanbanView = ({
                   const isRead = readLater.includes(url);
                   return (
                     <LinkCard
-                      key={idx}
+                      key={item.id || idx}
+                      id={item.id}
                       link={url}
+                      thumbnailUrl={item.thumbnailUrl}
+                      customTitle={item.title}
+                      customTags={item.customTags}
+                      notes={item.notes}
                       theme={theme}
                       viewMode="grid"
                       isFavorite={isFav}

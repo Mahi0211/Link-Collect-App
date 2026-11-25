@@ -233,7 +233,7 @@ public class DbSeeder
 
     private async Task EnsureSchemaUpdatedAsync()
     {
-        var columns = new (string Name, string Type)[]
+        var userColumns = new (string Name, string Type)[]
         {
             ("RoleTitle", "VARCHAR(150) NULL"),
             ("Location", "VARCHAR(150) NULL"),
@@ -243,42 +243,49 @@ public class DbSeeder
             ("SocialLinksJson", "LONGTEXT NULL")
         };
 
-        foreach (var (col, type) in columns)
+        foreach (var (col, type) in userColumns)
         {
-            // Try adding column if not exists
+            await EnsureColumnAsync("Users", "users", col, type);
+        }
+
+        await EnsureColumnAsync("Links", "links", "ThumbnailUrl", "LONGTEXT NULL");
+    }
+
+    private async Task EnsureColumnAsync(string tablePascal, string tableLower, string col, string type)
+    {
+        // Try adding column if not exists
+        try
+        {
+            await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `{tablePascal}` ADD COLUMN `{col}` {type};");
+        }
+        catch
+        {
             try
             {
-                await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `Users` ADD COLUMN `{col}` {type};");
+                await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `{tableLower}` ADD COLUMN `{col}` {type};");
+            }
+            catch
+            {
+                // Column already exists or schema not modified
+            }
+        }
+
+        // Ensure columns that hold large data (images, JSON) are widened to LONGTEXT
+        if (type.StartsWith("LONGTEXT", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `{tablePascal}` MODIFY COLUMN `{col}` LONGTEXT NULL;");
             }
             catch
             {
                 try
                 {
-                    await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `users` ADD COLUMN `{col}` {type};");
+                    await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `{tableLower}` MODIFY COLUMN `{col}` LONGTEXT NULL;");
                 }
                 catch
                 {
-                    // Column already exists or schema not modified
-                }
-            }
-
-            // Ensure columns that hold large data (images, JSON) are widened to LONGTEXT
-            if (type.StartsWith("LONGTEXT", StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `Users` MODIFY COLUMN `{col}` LONGTEXT NULL;");
-                }
-                catch
-                {
-                    try
-                    {
-                        await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE `users` MODIFY COLUMN `{col}` LONGTEXT NULL;");
-                    }
-                    catch
-                    {
-                        // Column modification not needed or unsupported
-                    }
+                    // Column modification not needed or unsupported
                 }
             }
         }

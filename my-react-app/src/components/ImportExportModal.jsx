@@ -42,6 +42,7 @@ export function ImportExportModal({ isOpen, onClose, currentLinks = [], collecti
                 url: typeof l === 'string' ? l : l.url || l.link,
                 title: l.title || '',
                 collectionName: c.collectionName || c.name || 'Imported',
+                thumbnailUrl: l.thumbnailUrl || l.image || undefined,
                 customTags: l.customTags || []
               });
             });
@@ -77,6 +78,7 @@ export function ImportExportModal({ isOpen, onClose, currentLinks = [], collecti
       const payload = parsedData.links.map(l => ({
         url: l.url,
         title: l.title || undefined,
+        thumbnailUrl: l.thumbnailUrl || l.image || undefined,
         collectionName: importTarget === 'auto' ? (l.collectionName || 'Imported Bookmarks') : undefined,
         collectionId: importTarget !== 'auto' ? parseInt(importTarget, 10) : undefined,
         customTags: l.customTags || ['Imported'],

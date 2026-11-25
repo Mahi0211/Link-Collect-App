@@ -64,6 +64,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(l => l.Url).IsRequired();
             entity.Property(l => l.Title).HasMaxLength(500);
             entity.Property(l => l.Domain).HasMaxLength(255);
+            entity.Property(l => l.ThumbnailUrl).HasColumnType("longtext");
             entity.Property(l => l.IsPublic).HasDefaultValue(false);
 
             entity.HasIndex(l => l.UserId);

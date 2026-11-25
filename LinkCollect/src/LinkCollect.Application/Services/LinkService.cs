@@ -9,10 +9,12 @@ namespace LinkCollect.Application.Services;
 public class LinkService : ILinkService
 {
     private readonly IApplicationDbContext _context;
+    private readonly IMetadataService _metadataService;
 
-    public LinkService(IApplicationDbContext context)
+    public LinkService(IApplicationDbContext context, IMetadataService metadataService)
     {
         _context = context;
+        _metadataService = metadataService;
     }
 
     public async Task<List<LinkDto>> GetUserLinksAsync(
@@ -127,6 +129,9 @@ public class LinkService : ILinkService
         var url = request.Url.Trim();
         var domain = ExtractDomain(url);
         var title = !string.IsNullOrWhiteSpace(request.Title) ? request.Title.Trim() : GetFallbackTitle(url, domain);
+        var thumbnailUrl = request.ThumbnailUrl != null
+            ? request.ThumbnailUrl.Trim()
+            : await TryScrapeThumbnailAsync(url, cancellationToken);
 
         int? collectionId = request.CollectionId;
         if (!collectionId.HasValue && !string.IsNullOrWhiteSpace(request.CollectionName))
@@ -158,6 +163,7 @@ public class LinkService : ILinkService
             Title = title,
             Domain = domain,
             Notes = request.Notes?.Trim() ?? string.Empty,
+            ThumbnailUrl = thumbnailUrl,
             IsPublic = request.IsPublic ?? false,
             IsFavorite = request.IsFavorite,
             IsReadLater = request.IsReadLater,
@@ -198,9 +204,12 @@ public class LinkService : ILinkService
             throw new NotFoundException("Link not found.");
         }
 
+        var urlChanged = false;
         if (request.Url != null)
         {
-            linkItem.Url = request.Url.Trim();
+            var trimmedUrl = request.Url.Trim();
+            urlChanged = !string.Equals(trimmedUrl, linkItem.Url, StringComparison.OrdinalIgnoreCase);
+            linkItem.Url = trimmedUrl;
             linkItem.Domain = ExtractDomain(linkItem.Url);
         }
 
@@ -212,6 +221,15 @@ public class LinkService : ILinkService
         if (request.Notes != null)
         {
             linkItem.Notes = request.Notes.Trim();
+        }
+
+        if (request.ThumbnailUrl != null)
+        {
+            linkItem.ThumbnailUrl = request.ThumbnailUrl.Trim();
+        }
+        else if (urlChanged)
+        {
+            linkItem.ThumbnailUrl = await TryScrapeThumbnailAsync(linkItem.Url, cancellationToken);
         }
 
         if (request.IsPublic.HasValue)
@@ -643,6 +661,7 @@ public class LinkService : ILinkService
                 Title = title,
                 Domain = domain,
                 Notes = item.Notes ?? string.Empty,
+                ThumbnailUrl = item.ThumbnailUrl?.Trim(),
                 IsFavorite = item.IsFavorite,
                 IsReadLater = item.IsReadLater,
                 IsArchived = item.IsArchived,
@@ -741,6 +760,7 @@ public class LinkService : ILinkService
             Title = l.Title,
             Domain = l.Domain,
             Notes = l.Notes,
+            ThumbnailUrl = l.ThumbnailUrl,
             IsPublic = l.IsPublic,
             CustomTags = l.LinkTags.Where(lt => lt.Tag != null).Select(lt => lt.Tag!.Name).ToList(),
             IsFavorite = l.IsFavorite,
@@ -790,5 +810,20 @@ public class LinkService : ILinkService
         catch { }
 
         return $"{domain} resource";
+    }
+
+    private async Task<string?> TryScrapeThumbnailAsync(string url, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scrapeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            scrapeCts.CancelAfter(TimeSpan.FromMilliseconds(2500));
+            var meta = await _metadataService.ScrapeMetadataAsync(url, scrapeCts.Token);
+            return string.IsNullOrWhiteSpace(meta?.Image) ? string.Empty : meta.Image.Trim();
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

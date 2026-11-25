@@ -124,7 +124,14 @@ export const LinkDetailDrawer = ({
 
   const domain = getDomainName(url);
   const faviconUrl = getFaviconUrl(url);
-  const preview = getLinkPreviewData(url);
+  const preview = getLinkPreviewData(url, item?.thumbnailUrl);
+  const [bannerImgSrc, setBannerImgSrc] = useState(preview.thumbnailUrl);
+  const [bannerImgError, setBannerImgError] = useState(false);
+
+  useEffect(() => {
+    setBannerImgSrc(preview.thumbnailUrl);
+    setBannerImgError(false);
+  }, [preview.thumbnailUrl]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(url);
@@ -185,12 +192,14 @@ export const LinkDetailDrawer = ({
 
   const handleSave = () => {
     if (onUpdateItem) {
+      const urlUnchanged = url.trim() === (item.url || '').trim();
       onUpdateItem({
         originalUrl: item.url,
         url,
         title,
         collectionName,
         notes,
+        thumbnailUrl: urlUnchanged ? item.thumbnailUrl : undefined,
         customTags: tags,
         isPublic,
         isFavorite,
@@ -312,20 +321,24 @@ export const LinkDetailDrawer = ({
             overflow: 'hidden',
           }}
         >
-          {preview.thumbnailUrl && (
+          {bannerImgSrc && !bannerImgError && (
             <img
-              src={preview.thumbnailUrl}
+              src={bannerImgSrc}
               alt=""
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                objectPosition: 'top center',
+                objectPosition: (preview.isCustomThumbnail && bannerImgSrc === preview.thumbnailUrl) ? 'center' : 'top center',
                 position: 'absolute',
                 inset: 0,
               }}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
+              onError={() => {
+                if (preview.fallbackThumbnailUrl && bannerImgSrc !== preview.fallbackThumbnailUrl) {
+                  setBannerImgSrc(preview.fallbackThumbnailUrl);
+                } else {
+                  setBannerImgError(true);
+                }
               }}
             />
           )}

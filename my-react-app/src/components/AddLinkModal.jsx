@@ -31,8 +31,6 @@ export const AddLinkModal = ({
   initialUrl = '',
   initialTitle = ''
 }) => {
-  if (!isOpen) return null;
-
   const colors = themes[theme];
   const isDark = theme === 'dark';
 
@@ -57,9 +55,43 @@ export const AddLinkModal = ({
   const [metadataPreview, setMetadataPreview] = useState(null);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const debounceTimerRef = useRef(null);
+  const wasOpenRef = useRef(false);
+
+  // Reset form state cleanly whenever the modal transitions from closed to open
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      setUrl(initialUrl || '');
+      setTitle(initialTitle || '');
+      setSelectedCollection(defaultCollection);
+      setTags([]);
+      setTagInput('');
+      setNotes('');
+      setIsPublic(false);
+      setIsFavorite(false);
+      setIsReadLater(false);
+      setWatched(false);
+      setRewatchWorthy(false);
+      setMetadataPreview(null);
+      setDuplicateWarning(null);
+      setIsScraping(false);
+    } else if (!isOpen && wasOpenRef.current) {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen, initialUrl, initialTitle, defaultCollection]);
+
+  // Keep selectedCollection valid once collections load from API (e.g. bookmarklet ?addUrl=... entry)
+  useEffect(() => {
+    if (!isOpen || collections.length === 0) return;
+    const hasMatch = collections.some((c) => getColName(c) === selectedCollection);
+    if (!hasMatch) {
+      setSelectedCollection(defaultCollection);
+    }
+  }, [isOpen, collections, selectedCollection, defaultCollection]);
 
   // Trigger auto-scrape and duplicate check on URL input
   useEffect(() => {
+    if (!isOpen) return;
     if (!url || url.trim().length < 5) {
       setDuplicateWarning(null);
       setMetadataPreview(null);
@@ -67,6 +99,7 @@ export const AddLinkModal = ({
     }
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    let isCancelled = false;
 
     debounceTimerRef.current = setTimeout(async () => {
       let finalUrl = url.trim();
@@ -75,45 +108,48 @@ export const AddLinkModal = ({
       // 1. Check Duplicate
       try {
         const dupRes = await api.checkDuplicate(finalUrl);
-        if (dupRes && dupRes.exists) {
-          setDuplicateWarning(dupRes);
-        } else {
-          setDuplicateWarning(null);
+        if (!isCancelled) {
+          setDuplicateWarning(dupRes && dupRes.exists ? dupRes : null);
         }
       } catch {
         // silent fail
       }
 
       // 2. Scrape Metadata
-      setIsScraping(true);
+      if (!isCancelled) setIsScraping(true);
       try {
         const meta = await api.scrapeMetadata(finalUrl);
-        if (meta) {
+        if (!isCancelled && meta) {
           setMetadataPreview(meta);
-          if (meta.title && (!title || title === 'Saved Link' || title === getPageTitle(finalUrl))) {
-            setTitle(meta.title);
+          if (meta.title) {
+            setTitle((prev) => (!prev || prev === 'Saved Link' || prev === getPageTitle(finalUrl) ? meta.title : prev));
           }
-          if (meta.description && !notes) {
-            setNotes(meta.description);
+          if (meta.description) {
+            setNotes((prev) => (!prev ? meta.description : prev));
           }
           const suggested = meta.keywords && meta.keywords.length > 0 ? meta.keywords : getSuggestedTags(finalUrl);
           setTags((prev) => Array.from(new Set([...prev, ...suggested])));
         }
       } catch {
-        // fallback to client-side heuristics
-        const autoTitle = getPageTitle(finalUrl);
-        if (!title || title === 'Saved Link') setTitle(autoTitle);
-        const suggested = getSuggestedTags(finalUrl);
-        setTags((prev) => Array.from(new Set([...prev, ...suggested])));
+        if (!isCancelled) {
+          // fallback to client-side heuristics
+          const autoTitle = getPageTitle(finalUrl);
+          setTitle((prev) => (!prev || prev === 'Saved Link' ? autoTitle : prev));
+          const suggested = getSuggestedTags(finalUrl);
+          setTags((prev) => Array.from(new Set([...prev, ...suggested])));
+        }
       } finally {
-        setIsScraping(false);
+        if (!isCancelled) setIsScraping(false);
       }
     }, 450);
 
     return () => {
+      isCancelled = true;
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
-  }, [url]);
+  }, [url, isOpen]);
+
+  if (!isOpen) return null;
 
   const handleAddTag = (e) => {
     if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
@@ -141,6 +177,9 @@ export const AddLinkModal = ({
     }
 
     const finalTitle = title.trim() || getPageTitle(finalUrl);
+    const thumbnailUrl = metadataPreview?.image
+      ? metadataPreview.image
+      : (metadataPreview && !isScraping ? '' : null);
 
     onAddLink({
       url: finalUrl,
@@ -148,6 +187,7 @@ export const AddLinkModal = ({
       collectionName: selectedCollection,
       customTags: tags,
       notes: notes.trim(),
+      thumbnailUrl,
       isPublic,
       isFavorite,
       isReadLater,

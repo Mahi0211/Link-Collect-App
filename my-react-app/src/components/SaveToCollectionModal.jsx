@@ -46,6 +46,7 @@ export const SaveToCollectionModal = ({
         url,
         title,
         notes: linkItem.notes || '',
+        thumbnailUrl: linkItem.thumbnailUrl ?? undefined,
         customTags: linkItem.customTags || [],
         collectionId: isCreatingNew ? undefined : selectedCollectionId,
         collectionName: isCreatingNew ? newCollectionName.trim() : undefined,

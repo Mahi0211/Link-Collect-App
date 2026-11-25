@@ -67,6 +67,7 @@ public class SharedLinkDto
     public string Title { get; set; } = string.Empty;
     public string Domain { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+    public string? ThumbnailUrl { get; set; }
     public List<string> CustomTags { get; set; } = new();
     public int Rating { get; set; }
     public bool Watched { get; set; }

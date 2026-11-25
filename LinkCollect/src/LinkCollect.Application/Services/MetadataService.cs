@@ -92,9 +92,11 @@ public class MetadataService : IMetadataService
             }
 
             // Extract Image / OpenGraph Banner
-            var image = ExtractMeta(html, @"<meta\s+property=[""']og:image[""']\s+content=[""']([^""']+)[""']",
-                                         @"<meta\s+content=[""']([^""']+)[""']\s+property=[""']og:image[""']",
-                                         @"<meta\s+name=[""']twitter:image[""']\s+content=[""']([^""']+)[""']");
+            var image = ExtractMeta(html,
+                @"<meta[^>]+(?:property|name)=[""'](?:og:image|og:image:secure_url|og:image:url|twitter:image|twitter:image:src)[""'][^>]+content=[""']([^""']+)[""']",
+                @"<meta[^>]+content=[""']([^""']+)[""'][^>]+(?:property|name)=[""'](?:og:image|og:image:secure_url|og:image:url|twitter:image|twitter:image:src)[""']",
+                @"<link[^>]+rel=[""']image_src[""'][^>]+href=[""']([^""']+)[""']",
+                @"<link[^>]+href=[""']([^""']+)[""'][^>]+rel=[""']image_src[""']");
 
             if (!string.IsNullOrWhiteSpace(image))
             {
@@ -210,6 +212,11 @@ public class MetadataService : IMetadataService
 
     private static string ResolveAbsoluteUrl(Uri baseUri, string relativeOrAbsolute)
     {
+        if (relativeOrAbsolute.StartsWith("//", StringComparison.Ordinal))
+        {
+            return $"{baseUri.Scheme}:{relativeOrAbsolute}";
+        }
+
         if (Uri.TryCreate(relativeOrAbsolute, UriKind.Absolute, out var absUri))
         {
             return absUri.ToString();

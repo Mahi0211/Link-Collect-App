@@ -480,6 +480,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         domain: l.domain || getDomainName(l.url),
         customTags: l.customTags || [],
         notes: l.notes || '',
+        thumbnailUrl: l.thumbnailUrl ?? null,
         isPublic: Boolean(l.isPublic),
         isFavorite: Boolean(l.isFavorite),
         isReadLater: Boolean(l.isReadLater),
@@ -514,6 +515,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           domain: getDomainName(url),
           customTags: meta.customTags || [],
           notes: meta.notes || '',
+          thumbnailUrl: meta.thumbnailUrl ?? null,
           isPublic: Boolean(meta.isPublic),
           isFavorite: favorites.includes(url),
           isReadLater: readLater.includes(url),
@@ -666,7 +668,20 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
 
   // Add Link
   const handleAddLink = async (newLinkData) => {
-    const { url, title, collectionName, customTags, notes, isPublic, isFavorite, isReadLater } = newLinkData;
+    const {
+      url,
+      title,
+      collectionName,
+      customTags,
+      notes,
+      thumbnailUrl,
+      isPublic,
+      isFavorite,
+      isReadLater,
+      watched,
+      watchCount,
+      rewatchWorthy,
+    } = newLinkData;
 
     try {
       const created = await api.createLink({
@@ -675,9 +690,13 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         collectionName,
         customTags,
         notes,
+        thumbnailUrl,
         isPublic,
         isFavorite,
         isReadLater,
+        watched: Boolean(watched),
+        watchCount: watchCount || 0,
+        rewatchWorthy: Boolean(rewatchWorthy),
       });
 
       if (created) {
@@ -704,7 +723,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     // Save metadata locally
     setLinkMetadata((prev) => ({
       ...prev,
-      [url]: { title, notes, customTags, collectionName },
+      [url]: { title, notes, customTags, collectionName, thumbnailUrl: thumbnailUrl ?? null },
     }));
 
     if (isFavorite && !favorites.includes(url)) {
@@ -715,6 +734,19 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     }
   };
 
+  // Silently persist lazily-resolved OpenGraph thumbnails for legacy links
+  const handleBackfillThumbnail = async (linkId, nextThumbnailUrl) => {
+    if (!linkId || nextThumbnailUrl === null || nextThumbnailUrl === undefined) return;
+    setDbLinks((prev) =>
+      (prev || []).map((l) => (l.id === linkId ? { ...l, thumbnailUrl: nextThumbnailUrl } : l))
+    );
+    try {
+      await api.updateLink(linkId, { thumbnailUrl: nextThumbnailUrl });
+    } catch {
+      // non-fatal background cache sync
+    }
+  };
+
   // Update existing link from drawer
   const handleUpdateLink = async ({
     originalUrl,
@@ -722,6 +754,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     title,
     collectionName,
     notes,
+    thumbnailUrl,
     customTags,
     isPublic,
     isFavorite,
@@ -735,7 +768,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
     const targetItem = allLinks.find((l) => l.url === originalUrl || l.url === url);
     if (targetItem?.id) {
       try {
-        const updated = await api.updateLink(targetItem.id, {
+        const updatePayload = {
           url,
           title,
           collectionName,
@@ -749,7 +782,11 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           watched,
           watchCount,
           rewatchWorthy,
-        });
+        };
+        if (thumbnailUrl !== undefined) {
+          updatePayload.thumbnailUrl = thumbnailUrl;
+        }
+        const updated = await api.updateLink(targetItem.id, updatePayload);
 
         if (updated) {
           setDbLinks((prev) => (prev || []).map((l) => (l.id === targetItem.id ? updated : l)));
@@ -765,6 +802,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         ...(prev[url] || {}),
         title,
         notes,
+        thumbnailUrl: thumbnailUrl !== undefined ? thumbnailUrl : (prev[url]?.thumbnailUrl ?? null),
         customTags,
         collectionName,
         isPublic: isPublic !== undefined ? isPublic : (prev[url]?.isPublic || false),
@@ -1024,6 +1062,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         domain: l.domain || getDomainName(l.url),
         customTags: l.customTags || [],
         notes: l.notes || '',
+        thumbnailUrl: l.thumbnailUrl ?? null,
         collectionName: activeFriendCol?.collectionName || 'Friend Collection',
         isPublic: true,
         isReadOnly: true,
@@ -2064,7 +2103,10 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
               {paginatedLinks.map((item, idx) => (
                 <LinkCard
                   key={item.id || idx}
+                  id={item.id}
                   link={item.url}
+                  thumbnailUrl={item.thumbnailUrl}
+                  onBackfillThumbnail={handleBackfillThumbnail}
                   theme={theme}
                   viewMode="list"
                   isFavorite={item.isFavorite}
@@ -2109,7 +2151,10 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
               {paginatedLinks.map((item, idx) => (
                 <LinkCard
                   key={item.id || idx}
+                  id={item.id}
                   link={item.url}
+                  thumbnailUrl={item.thumbnailUrl}
+                  onBackfillThumbnail={handleBackfillThumbnail}
                   theme={theme}
                   viewMode="grid"
                   isFavorite={item.isFavorite}

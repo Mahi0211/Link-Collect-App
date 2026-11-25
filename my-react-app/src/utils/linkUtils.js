@@ -108,13 +108,74 @@ export const getEstimatedReadingTime = (url) => {
   return '3 min read';
 };
 
-// Generate live screenshot thumbnail or rich visual fallback
-export const getLinkPreviewData = (url) => {
+const thumbnailScrapeCache = new Map();
+const thumbnailScrapeQueue = [];
+let activeThumbnailScrapes = 0;
+const MAX_CONCURRENT_SCRAPES = 2;
+
+const drainThumbnailQueue = () => {
+  while (activeThumbnailScrapes < MAX_CONCURRENT_SCRAPES && thumbnailScrapeQueue.length > 0) {
+    const { url, scrapeFn, resolve } = thumbnailScrapeQueue.shift();
+    activeThumbnailScrapes++;
+    scrapeFn(url)
+      .then((meta) => {
+        const result = meta?.image && typeof meta.image === 'string' && meta.image.trim()
+          ? meta.image.trim()
+          : '';
+        thumbnailScrapeCache.set(url, result);
+        resolve(result);
+      })
+      .catch(() => {
+        thumbnailScrapeCache.delete(url);
+        resolve(null);
+      })
+      .finally(() => {
+        activeThumbnailScrapes--;
+        drainThumbnailQueue();
+      });
+  }
+};
+
+export const isYouTubeUrl = (url = '') => {
+  try {
+    const domain = new URL(url).hostname.toLowerCase();
+    return domain.includes('youtube.com') || domain.includes('youtu.be');
+  } catch {
+    return false;
+  }
+};
+
+// Deduplicated, concurrency-limited async thumbnail resolver for legacy links missing a stored thumbnailUrl.
+// Resolves to an image URL string, '' when scraped with no og:image, or null on request failure.
+export const resolveLinkThumbnail = (url, scrapeFn) => {
+  if (!url || typeof scrapeFn !== 'function') return Promise.resolve(null);
+  if (thumbnailScrapeCache.has(url)) {
+    const cached = thumbnailScrapeCache.get(url);
+    return Promise.resolve(cached);
+  }
+
+  const pending = new Promise((resolve) => {
+    thumbnailScrapeQueue.push({ url, scrapeFn, resolve });
+    drainThumbnailQueue();
+  });
+
+  thumbnailScrapeCache.set(url, pending);
+  return pending;
+};
+
+// Generate preview using saved OpenGraph/custom thumbnail first, then YouTube or live screenshot fallback
+export const getLinkPreviewData = (url, savedThumbnailUrl = null) => {
+  const customThumbnail =
+    typeof savedThumbnailUrl === 'string' && savedThumbnailUrl.trim().length > 0
+      ? savedThumbnailUrl.trim()
+      : null;
+
   try {
     const urlObj = new URL(url);
     const domain = urlObj.hostname.toLowerCase();
 
     // 1. YouTube video thumbnail
+    let youtubeThumbnail = null;
     if (domain.includes('youtube.com') || domain.includes('youtu.be')) {
       let videoId = null;
       if (domain.includes('youtu.be')) {
@@ -123,13 +184,7 @@ export const getLinkPreviewData = (url) => {
         videoId = urlObj.searchParams.get('v');
       }
       if (videoId) {
-        return {
-          type: 'image',
-          thumbnailUrl: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
-          badge: 'YouTube',
-          accent: '#ff0000',
-          gradient: 'linear-gradient(135deg, #18181b 0%, #dc2626 100%)'
-        };
+        youtubeThumbnail = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
       }
     }
 
@@ -191,37 +246,76 @@ export const getLinkPreviewData = (url) => {
       }
     };
 
-    for (const [key, preset] of Object.entries(presets)) {
-      if (domain.includes(key)) {
-        return {
-          type: 'screenshot',
-          thumbnailUrl: screenshotUrl,
-          gradient: preset.gradient,
-          badge: preset.badge,
-          accent: preset.accent
-        };
+    let matchedStyle = null;
+    if (youtubeThumbnail) {
+      matchedStyle = {
+        badge: 'YouTube',
+        accent: '#ff0000',
+        gradient: 'linear-gradient(135deg, #18181b 0%, #dc2626 100%)'
+      };
+    } else {
+      for (const [key, preset] of Object.entries(presets)) {
+        if (domain.includes(key)) {
+          matchedStyle = preset;
+          break;
+        }
       }
     }
 
-    // Default elegant gradient fallback based on domain hash
-    let hash = 0;
-    for (let i = 0; i < domain.length; i++) {
-      hash = domain.charCodeAt(i) + ((hash << 5) - hash);
+    if (!matchedStyle) {
+      // Default elegant gradient fallback based on domain hash
+      let hash = 0;
+      for (let i = 0; i < domain.length; i++) {
+        hash = domain.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const hue1 = Math.abs(hash % 360);
+      const hue2 = (hue1 + 45) % 360;
+      matchedStyle = {
+        gradient: `linear-gradient(135deg, hsl(${hue1}, 70%, 45%) 0%, hsl(${hue2}, 80%, 25%) 100%)`,
+        badge: domain.split('.')[0].toUpperCase(),
+        accent: `hsl(${hue1}, 70%, 45%)`
+      };
     }
-    const hue1 = Math.abs(hash % 360);
-    const hue2 = (hue1 + 45) % 360;
+
+    if (customThumbnail) {
+      return {
+        type: 'image',
+        thumbnailUrl: customThumbnail,
+        fallbackThumbnailUrl: youtubeThumbnail || screenshotUrl,
+        isCustomThumbnail: true,
+        gradient: matchedStyle.gradient,
+        badge: matchedStyle.badge,
+        accent: matchedStyle.accent
+      };
+    }
+
+    if (youtubeThumbnail) {
+      return {
+        type: 'image',
+        thumbnailUrl: youtubeThumbnail,
+        fallbackThumbnailUrl: null,
+        isCustomThumbnail: true,
+        gradient: matchedStyle.gradient,
+        badge: matchedStyle.badge,
+        accent: matchedStyle.accent
+      };
+    }
 
     return {
       type: 'screenshot',
       thumbnailUrl: screenshotUrl,
-      gradient: `linear-gradient(135deg, hsl(${hue1}, 70%, 45%) 0%, hsl(${hue2}, 80%, 25%) 100%)`,
-      badge: domain.split('.')[0].toUpperCase(),
-      accent: `hsl(${hue1}, 70%, 45%)`
+      fallbackThumbnailUrl: null,
+      isCustomThumbnail: false,
+      gradient: matchedStyle.gradient,
+      badge: matchedStyle.badge,
+      accent: matchedStyle.accent
     };
   } catch {
     return {
-      type: 'screenshot',
-      thumbnailUrl: null,
+      type: customThumbnail ? 'image' : 'screenshot',
+      thumbnailUrl: customThumbnail,
+      fallbackThumbnailUrl: null,
+      isCustomThumbnail: Boolean(customThumbnail),
       gradient: 'linear-gradient(135deg, #4f46e5 0%, #9333ea 100%)',
       badge: 'LINK',
       accent: '#4f46e5'

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ExternalLink,
   Heart,
@@ -26,12 +26,18 @@ import {
   getDomainName,
   getPageTitle,
   getEstimatedReadingTime,
-  getLinkPreviewData
+  getLinkPreviewData,
+  isYouTubeUrl,
+  resolveLinkThumbnail
 } from '../utils/linkUtils';
+import { api } from '../utils/api';
 import { StarRating } from './StarRating';
 
 export const LinkCard = ({
+  id,
   link,
+  thumbnailUrl: savedThumbnailUrl,
+  onBackfillThumbnail,
   theme = 'dark',
   viewMode = 'grid',
   isFavorite = false,
@@ -70,11 +76,57 @@ export const LinkCard = ({
   const isDark = theme === 'dark';
 
   const url = typeof link === 'string' ? link : link.url || '';
+  const [resolvedThumbnail, setResolvedThumbnail] = useState(savedThumbnailUrl ?? null);
+
+  useEffect(() => {
+    setResolvedThumbnail(savedThumbnailUrl ?? null);
+  }, [savedThumbnailUrl, url]);
+
+  // Lazily fetch & backfill OpenGraph thumbnail once for legacy saved links missing thumbnailUrl
+  useEffect(() => {
+    if (resolvedThumbnail !== null && resolvedThumbnail !== undefined) return;
+    if (!id || isReadOnly || !url || isYouTubeUrl(url)) return;
+    if (!/^https?:\/\//i.test(url)) return;
+
+    let isMounted = true;
+    resolveLinkThumbnail(url, (u) => api.scrapeMetadata(u)).then((result) => {
+      if (!isMounted || result === null) return;
+      setResolvedThumbnail(result);
+      if (onBackfillThumbnail) {
+        onBackfillThumbnail(id, result);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, url, isReadOnly, resolvedThumbnail, onBackfillThumbnail]);
+
   const domain = getDomainName(url);
   const title = customTitle || getPageTitle(url);
   const faviconUrl = getFaviconUrl(url);
   const readingTime = getEstimatedReadingTime(url);
-  const preview = getLinkPreviewData(url);
+  const preview = getLinkPreviewData(url, resolvedThumbnail);
+
+  const [imgSrc, setImgSrc] = useState(preview.thumbnailUrl);
+  const imgRef = useRef(null);
+  const prevThumbnailUrlRef = useRef(preview.thumbnailUrl);
+
+  useEffect(() => {
+    if (prevThumbnailUrlRef.current !== preview.thumbnailUrl) {
+      prevThumbnailUrlRef.current = preview.thumbnailUrl;
+      setImgSrc(preview.thumbnailUrl);
+      setThumbnailError(false);
+      setThumbnailLoaded(false);
+    }
+  }, [preview.thumbnailUrl]);
+
+  useEffect(() => {
+    const imgEl = imgRef.current;
+    if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+      setThumbnailLoaded(true);
+    }
+  }, [imgSrc]);
 
   const handleCopy = (e) => {
     e.preventDefault();
@@ -109,9 +161,11 @@ export const LinkCard = ({
 
   // Pass all data when inspecting
   const itemPayload = {
+    id,
     url,
     title,
     domain,
+    thumbnailUrl: resolvedThumbnail,
     isFavorite,
     isReadLater,
     rating,
@@ -619,21 +673,28 @@ export const LinkCard = ({
           background: preview.gradient || 'linear-gradient(135deg, #18181b 0%, #27272a 100%)',
         }}
       >
-        {/* Actual Live Screenshot Thumbnail */}
-        {preview.thumbnailUrl && !thumbnailError && (
+        {/* Actual Saved OpenGraph / Fallback Screenshot Thumbnail */}
+        {imgSrc && !thumbnailError && (
           <img
-            src={preview.thumbnailUrl}
+            ref={imgRef}
+            src={imgSrc}
             alt={title}
             loading="lazy"
             onLoad={() => setThumbnailLoaded(true)}
-            onError={() => setThumbnailError(true)}
+            onError={() => {
+              if (preview.fallbackThumbnailUrl && imgSrc !== preview.fallbackThumbnailUrl) {
+                setImgSrc(preview.fallbackThumbnailUrl);
+              } else {
+                setThumbnailError(true);
+              }
+            }}
             style={{
               position: 'absolute',
               inset: 0,
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              objectPosition: 'top center',
+              objectPosition: (preview.isCustomThumbnail && imgSrc === preview.thumbnailUrl) ? 'center' : 'top center',
               opacity: thumbnailLoaded ? 1 : 0,
               transition: 'opacity 0.3s ease, transform 0.4s ease',
             }}
