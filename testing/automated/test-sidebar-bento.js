@@ -138,6 +138,49 @@ async function runSidebarBentoVerification() {
     const allBtn = aside.locator('button:has-text("All Bookmarks")').first();
     await allBtn.click();
     await page.waitForTimeout(200);
+
+    // 4. Verify Collections | Tags Segmented Switcher in Dark & Light modes
+    const colTab = aside.locator('button[role="tab"]:has-text("Collections")').first();
+    const tagTab = aside.locator('button[role="tab"]:has-text("Tags")').first();
+    const tabMetrics = await page.evaluate(() => {
+      const cols = document.querySelector('aside button[role="tab"]');
+      const tags = document.querySelectorAll('aside button[role="tab"]')[1];
+      if (!cols || !tags) return null;
+      const rc = cols.getBoundingClientRect();
+      const rt = tags.getBoundingClientRect();
+      return {
+        colSelected: cols.getAttribute('aria-selected'),
+        tagSelected: tags.getAttribute('aria-selected'),
+        rowAligned: Math.abs(rc.top - rt.top) <= 2 && rt.left > rc.left,
+      };
+    });
+    assert(
+      'Collections & Tags segmented tabs render side-by-side with Collections active',
+      Boolean(tabMetrics && tabMetrics.rowAligned && tabMetrics.colSelected === 'true' && tabMetrics.tagSelected === 'false'),
+      JSON.stringify(tabMetrics)
+    );
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'SIDEBAR-TABS-001-collections.png') });
+
+    await tagTab.click();
+    await page.waitForTimeout(250);
+    const afterTagClick = await page.evaluate(() => {
+      const tags = document.querySelectorAll('aside button[role="tab"]')[1];
+      const hasAddColBtn = Boolean(document.querySelector('aside button[title="Add New Collection"]'));
+      return {
+        tagSelected: tags?.getAttribute('aria-selected'),
+        collectionsHidden: !hasAddColBtn,
+      };
+    });
+    assert(
+      'Clicking Tags tab switches to Tags view and hides Collections list',
+      afterTagClick.tagSelected === 'true' && afterTagClick.collectionsHidden,
+      JSON.stringify(afterTagClick)
+    );
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'SIDEBAR-TABS-002-tags.png') });
+
+    await colTab.click();
+    await page.waitForTimeout(200);
+
     if (await themeToggle.isVisible()) {
       await themeToggle.click();
       await page.waitForTimeout(200);

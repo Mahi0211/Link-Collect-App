@@ -63,6 +63,14 @@ export const Sidebar = ({
   const isProfileActive = activeView === 'editProfile';
   const isChatActive = activeView === 'chat';
   const [hoveredViewId, setHoveredViewId] = useState(null);
+  const [activeBrowseTab, setActiveBrowseTab] = useState('collections'); // 'collections' | 'tags'
+  const [hoveredBrowseTab, setHoveredBrowseTab] = useState(null);
+
+  useEffect(() => {
+    if (selectedTag) {
+      setActiveBrowseTab('tags');
+    }
+  }, [selectedTag]);
 
   // Responsive mobile detector
   const [isMobile, setIsMobile] = useState(() => {
@@ -391,228 +399,359 @@ export const Sidebar = ({
             </div>
           </div>
 
-          {/* User Collections */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          {/* Collections & Tags Segmented Switcher */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div
+              role="tablist"
+              aria-label="Browse Collections and Tags"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0 8px 6px 8px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: '3px',
+                padding: '3px',
+                borderRadius: '11px',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#f1f5f9',
+                border: `1px solid ${colors.border}`,
               }}
             >
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  color: colors.textTertiary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                Collections
-              </span>
-              <button
-                onClick={() => handleItemSelect(onOpenAddCollection)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '2px',
-                  color: colors.textTertiary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  borderRadius: '4px',
-                }}
-                title="Add New Collection"
-              >
-                <Plus size={14} />
-              </button>
+              {[
+                { id: 'collections', label: 'Collections', count: collections.length },
+                { id: 'tags', label: 'Tags', count: allTags ? allTags.length : 0 },
+              ].map((tab) => {
+                const isTabActive = activeBrowseTab === tab.id;
+                const isTabHovered = hoveredBrowseTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isTabActive}
+                    onClick={() => setActiveBrowseTab(tab.id)}
+                    onMouseEnter={() => setHoveredBrowseTab(tab.id)}
+                    onMouseLeave={() => setHoveredBrowseTab((prev) => (prev === tab.id ? null : prev))}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '6px 8px',
+                      borderRadius: '8px',
+                      border: `1px solid ${isTabActive ? (isDark ? 'rgba(255, 255, 255, 0.08)' : colors.border) : 'transparent'}`,
+                      backgroundColor: isTabActive
+                        ? (isDark ? colors.bgTertiary : '#ffffff')
+                        : (isTabHovered ? (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.55)') : 'transparent'),
+                      boxShadow: isTabActive
+                        ? (isDark ? '0 1px 4px rgba(0, 0, 0, 0.35)' : colors.shadowSm)
+                        : 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: isTabActive ? '600' : '500',
+                      color: isTabActive ? colors.text : (isTabHovered ? colors.text : colors.textSecondary),
+                      transition: 'all 0.16s ease',
+                      minWidth: 0,
+                      outline: 'none',
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {tab.label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11.5px',
+                        fontWeight: '600',
+                        color: isTabActive ? colors.accent : colors.textTertiary,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {Number(tab.count || 0).toLocaleString()}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
-            {isLoading && collections.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '4px 8px' }}>
+            {activeBrowseTab === 'collections' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <div
-                  className="animate-pulse"
-                  style={{
-                    height: '28px',
-                    borderRadius: '6px',
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0',
-                  }}
-                />
-                <div
-                  className="animate-pulse"
-                  style={{
-                    height: '28px',
-                    borderRadius: '6px',
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0',
-                  }}
-                />
-              </div>
-            ) : collections.map((collection, idx) => {
-              const isSelected = activeView === 'collection' && activeCollectionId === idx;
-              const nameKey = (collection.collectionName || '').trim().toLowerCase();
-              const count = (collection.id ? collectionCounts[`id_${collection.id}`] : undefined)
-                ?? collectionCounts[nameKey]
-                ?? collection.totalLinks
-                ?? (collection.links?.length || 0);
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleItemSelect(() => onSelectCollection(idx))}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: isSelected
-                      ? (isDark ? 'rgba(99, 102, 241, 0.14)' : 'rgba(79, 70, 229, 0.08)')
-                      : 'transparent',
-                    color: isSelected ? colors.accent : colors.textSecondary,
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: isSelected ? '600' : '500',
-                    transition: 'all 0.15s ease',
-                    textAlign: 'left',
-                    width: '100%',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.backgroundColor = isDark ? '#1a1a22' : '#f1f5f9';
-                      e.currentTarget.style.color = colors.text;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = colors.textSecondary;
-                    }
+                    padding: '0 6px 4px 6px',
                   }}
                 >
+                  <span
+                    style={{
+                      fontSize: '10.5px',
+                      fontWeight: '600',
+                      color: colors.textTertiary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    Your Collections
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleItemSelect(onOpenAddCollection)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '3px 5px',
+                      color: colors.textTertiary,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      borderRadius: '5px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = colors.accent;
+                      e.currentTarget.style.backgroundColor = colors.accentLight;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = colors.textTertiary;
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                    title="Add New Collection"
+                  >
+                    <Plus size={13} />
+                    <span>New</span>
+                  </button>
+                </div>
+
+                {isLoading && collections.length === 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '4px 6px' }}>
+                    <div
+                      className="animate-pulse"
+                      style={{
+                        height: '28px',
+                        borderRadius: '6px',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0',
+                      }}
+                    />
+                    <div
+                      className="animate-pulse"
+                      style={{
+                        height: '28px',
+                        borderRadius: '6px',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0',
+                      }}
+                    />
+                  </div>
+                ) : collections.length === 0 ? (
+                  <div
+                    style={{
+                      padding: '14px 10px',
+                      textAlign: 'center',
+                      fontSize: '12px',
+                      color: colors.textTertiary,
+                    }}
+                  >
+                    No collections yet
+                  </div>
+                ) : (
+                  collections.map((collection, idx) => {
+                    const isSelected = activeView === 'collection' && activeCollectionId === idx;
+                    const nameKey = (collection.collectionName || '').trim().toLowerCase();
+                    const count = (collection.id ? collectionCounts[`id_${collection.id}`] : undefined)
+                      ?? collectionCounts[nameKey]
+                      ?? collection.totalLinks
+                      ?? (collection.links?.length || 0);
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => handleItemSelect(() => onSelectCollection(idx))}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          backgroundColor: isSelected
+                            ? (isDark ? 'rgba(99, 102, 241, 0.14)' : 'rgba(79, 70, 229, 0.08)')
+                            : 'transparent',
+                          color: isSelected ? colors.accent : colors.textSecondary,
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          fontWeight: isSelected ? '600' : '500',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left',
+                          width: '100%',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = isDark ? '#1a1a22' : '#f1f5f9';
+                            e.currentTarget.style.color = colors.text;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = colors.textSecondary;
+                          }
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          <Folder
+                            size={15}
+                            style={{
+                              color: isSelected ? colors.accent : colors.textTertiary,
+                              flexShrink: 0,
+                            }}
+                          />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
+                            <span
+                              style={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {collection.collectionName}
+                            </span>
+                            {collection.isPublic && (
+                              <Globe size={11} color="#10b981" title="Public (visible to friends)" style={{ flexShrink: 0 }} />
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                          {onShareCollection && collection.id && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onShareCollection(collection);
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: colors.textTertiary,
+                                cursor: 'pointer',
+                                padding: '3px',
+                                borderRadius: '4px',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = colors.accent)}
+                              onMouseLeave={(e) => (e.currentTarget.style.color = colors.textTertiary)}
+                              title={`Share "${collection.collectionName}" publicly`}
+                            >
+                              <Share2 size={12} />
+                            </button>
+                          )}
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              padding: '2px 6px',
+                              borderRadius: '10px',
+                              backgroundColor: isSelected
+                                ? (isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(79, 70, 229, 0.15)')
+                                : (isDark ? '#1f1f26' : '#f1f5f9'),
+                              color: isSelected ? colors.accent : colors.textTertiary,
+                              fontWeight: '600',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {count}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {selectedTag && (
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      justifyContent: 'space-between',
+                      padding: '0 6px',
                     }}
                   >
-                    <Folder
-                      size={15}
-                      style={{
-                        color: isSelected ? colors.accent : colors.textTertiary,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
-                      <span
-                        style={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {collection.collectionName}
-                      </span>
-                      {collection.isPublic && (
-                        <Globe size={11} color="#10b981" title="Public (visible to friends)" style={{ flexShrink: 0 }} />
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                    {onShareCollection && collection.id && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onShareCollection(collection);
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: colors.textTertiary,
-                          cursor: 'pointer',
-                          padding: '3px',
-                          borderRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = colors.accent)}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = colors.textTertiary)}
-                        title={`Share "${collection.collectionName}" publicly`}
-                      >
-                        <Share2 size={12} />
-                      </button>
-                    )}
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        padding: '2px 6px',
-                        borderRadius: '10px',
-                        backgroundColor: isSelected
-                          ? (isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(79, 70, 229, 0.15)')
-                          : (isDark ? '#1f1f26' : '#f1f5f9'),
-                        color: isSelected ? colors.accent : colors.textTertiary,
-                        fontWeight: '600',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {count}
+                    <span style={{ fontSize: '10.5px', fontWeight: '600', color: colors.accent }}>
+                      Filtered by #{selectedTag}
                     </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Tags Matrix */}
-          {allTags && allTags.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  color: colors.textTertiary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  padding: '0 8px',
-                }}
-              >
-                Tags
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '0 4px' }}>
-                {allTags.map((tag) => {
-                  const isTagSelected = selectedTag === tag;
-                  return (
                     <button
-                      key={tag}
-                      onClick={() => handleItemSelect(() => onSelectTag(isTagSelected ? null : tag))}
+                      type="button"
+                      onClick={() => handleItemSelect(() => onSelectTag(null))}
                       style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        border: `1px solid ${isTagSelected ? colors.accent : colors.border}`,
-                        backgroundColor: isTagSelected ? colors.accentLight : 'transparent',
-                        color: isTagSelected ? colors.accent : colors.textSecondary,
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
                         fontSize: '11px',
+                        color: colors.textTertiary,
                         cursor: 'pointer',
-                        fontWeight: isTagSelected ? '600' : '400',
-                        transition: 'all 0.15s ease',
+                        textDecoration: 'underline',
                       }}
                     >
-                      <Tag size={10} />
-                      #{tag}
+                      Clear
                     </button>
-                  );
-                })}
+                  </div>
+                )}
+
+                {allTags && allTags.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', padding: '0 2px' }}>
+                    {allTags.map((tag) => {
+                      const isTagSelected = selectedTag === tag;
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleItemSelect(() => onSelectTag(isTagSelected ? null : tag))}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 9px',
+                            borderRadius: '7px',
+                            border: `1px solid ${isTagSelected ? colors.accent : colors.border}`,
+                            backgroundColor: isTagSelected
+                              ? colors.accentLight
+                              : (isDark ? colors.cardBg : '#ffffff'),
+                            color: isTagSelected ? colors.accent : colors.textSecondary,
+                            fontSize: '11.5px',
+                            cursor: 'pointer',
+                            fontWeight: isTagSelected ? '600' : '500',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <Tag size={10} />
+                          <span>#{tag}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      padding: '14px 10px',
+                      textAlign: 'center',
+                      fontSize: '12px',
+                      color: colors.textTertiary,
+                    }}
+                  >
+                    No tags yet
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Bottom 3-Button Quick-Access Layout (Profile, Social, Chat) */}
