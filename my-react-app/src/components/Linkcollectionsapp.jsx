@@ -44,6 +44,7 @@ import { FriendsModal } from './FriendsModal';
 import { SaveToCollectionModal } from './SaveToCollectionModal';
 import { EditProfilePage } from './EditProfilePage';
 import { ChatComingSoonPage } from './ChatComingSoonPage';
+import { CollectionsPlaceholderPage, TagsPlaceholderPage } from './BrowsePlaceholderPages';
 import { getDomainName, getPageTitle, detectMediaType } from '../utils/linkUtils';
 import { api } from '../utils/api';
 
@@ -1250,6 +1251,18 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         subtitle: 'Realtime chat and collaboration space (Coming soon)',
       };
     }
+    if (activeView === 'collections') {
+      return {
+        title: 'All Collections',
+        subtitle: `${collections.length} collections in your workspace`,
+      };
+    }
+    if (activeView === 'tags') {
+      return {
+        title: 'All Tags',
+        subtitle: `${allTags.length} tags across your bookmarks`,
+      };
+    }
     if (activeView === 'collection') {
       const col = collections[activeCollectionId];
       const nameKey = (col?.collectionName || '').trim().toLowerCase();
@@ -1350,6 +1363,16 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           setActiveView('chat');
           showToast('LinkCollect Realtime Chat & Collaboration is coming soon in v2.5!', 'info');
         }}
+        onOpenAllCollections={() => {
+          setActiveView('collections');
+          setSelectedTag(null);
+          setFilters(INITIAL_FILTERS);
+        }}
+        onOpenAllTags={() => {
+          setActiveView('tags');
+          setSelectedTag(null);
+          setFilters(INITIAL_FILTERS);
+        }}
       />
 
       {/* Main Workspace Frame */}
@@ -1362,7 +1385,7 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           minWidth: 0,
           height: '100vh',
           maxHeight: '100vh',
-          overflowY: (activeView === 'editProfile' || activeView === 'chat') ? 'hidden' : 'auto',
+          overflowY: ['editProfile', 'chat', 'collections', 'tags'].includes(activeView) ? 'hidden' : 'auto',
           overflowX: 'hidden',
         }}
       >
@@ -1414,6 +1437,18 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
           <ChatComingSoonPage
             onBack={() => setActiveView('all')}
             onOpenFriends={() => setIsFriendsModalOpen(true)}
+            theme={theme}
+          />
+        ) : activeView === 'collections' ? (
+          <CollectionsPlaceholderPage
+            collectionsCount={collections.length}
+            onBack={() => setActiveView('all')}
+            theme={theme}
+          />
+        ) : activeView === 'tags' ? (
+          <TagsPlaceholderPage
+            tagsCount={allTags.length}
+            onBack={() => setActiveView('all')}
             theme={theme}
           />
         ) : (

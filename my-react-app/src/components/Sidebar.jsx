@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Layers,
   Heart,
@@ -50,7 +50,9 @@ export const Sidebar = ({
   onOpenFriendsModal,
   pendingRequestsCount = 0,
   onOpenEditProfile,
-  onOpenChat
+  onOpenChat,
+  onOpenAllCollections,
+  onOpenAllTags
 }) => {
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
@@ -65,12 +67,45 @@ export const Sidebar = ({
   const [hoveredViewId, setHoveredViewId] = useState(null);
   const [activeBrowseTab, setActiveBrowseTab] = useState('collections'); // 'collections' | 'tags'
   const [hoveredBrowseTab, setHoveredBrowseTab] = useState(null);
+  const [isHeaderSticky, setIsHeaderSticky] = useState(false);
+
+  const navScrollRef = useRef(null);
+  const stickySentinelRef = useRef(null);
+
+  const isViewAllActive = activeBrowseTab === 'tags'
+    ? activeView === 'tags'
+    : activeView === 'collections';
+
+  const updateStickyState = useCallback(() => {
+    const container = navScrollRef.current;
+    const sentinel = stickySentinelRef.current;
+    if (!container || !sentinel) return;
+
+    if (container.scrollTop <= 0) {
+      setIsHeaderSticky(false);
+      return;
+    }
+
+    const containerTop = container.getBoundingClientRect().top;
+    const sentinelBottom = sentinel.getBoundingClientRect().bottom;
+    const stuck = sentinelBottom <= containerTop + 1;
+    setIsHeaderSticky((prev) => (prev === stuck ? prev : stuck));
+  }, []);
 
   useEffect(() => {
     if (selectedTag) {
       setActiveBrowseTab('tags');
     }
   }, [selectedTag]);
+
+  useEffect(() => {
+    const rafId = requestAnimationFrame(updateStickyState);
+    window.addEventListener('resize', updateStickyState);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', updateStickyState);
+    };
+  }, [updateStickyState, activeBrowseTab, collections.length, allTags?.length, isOpen]);
 
   // Responsive mobile detector
   const [isMobile, setIsMobile] = useState(() => {
@@ -362,17 +397,20 @@ export const Sidebar = ({
 
         {/* Scrollable Navigation Body */}
         <div
+          ref={navScrollRef}
+          onScroll={updateStickyState}
+          data-sidebar-scroll="true"
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '14px 10px',
+            padding: '0 10px 14px 10px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '18px',
+            gap: '12px',
           }}
         >
           {/* Quick Views */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '14px' }}>
             <span
               style={{
                 fontSize: '11px',
@@ -400,20 +438,44 @@ export const Sidebar = ({
           </div>
 
           {/* Collections & Tags Segmented Switcher */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div
-              role="tablist"
-              aria-label="Browse Collections and Tags"
+              ref={stickySentinelRef}
+              aria-hidden="true"
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                gap: '3px',
-                padding: '3px',
-                borderRadius: '11px',
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#f1f5f9',
-                border: `1px solid ${colors.border}`,
+                height: 0,
+                marginBottom: '-4px',
+                pointerEvents: 'none',
+              }}
+            />
+            <div
+              data-sticky-header={isHeaderSticky ? 'true' : 'false'}
+              style={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 10,
+                backgroundColor: isDark ? colors.sidebarBg : '#ffffff',
+                padding: '6px 0',
+                borderBottom: isHeaderSticky ? `1px solid ${colors.borderLight}` : '1px solid transparent',
+                boxShadow: isHeaderSticky
+                  ? (isDark ? '0 6px 14px rgba(0, 0, 0, 0.35)' : '0 4px 10px rgba(15, 23, 42, 0.06)')
+                  : 'none',
+                transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
               }}
             >
+              <div
+                role="tablist"
+                aria-label="Browse Collections and Tags"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                  gap: '3px',
+                  padding: '3px',
+                  borderRadius: '11px',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#f1f5f9',
+                  border: `1px solid ${colors.border}`,
+                }}
+              >
               {[
                 { id: 'collections', label: 'Collections', count: collections.length },
                 { id: 'tags', label: 'Tags', count: allTags ? allTags.length : 0 },
@@ -468,6 +530,7 @@ export const Sidebar = ({
                   </button>
                 );
               })}
+              </div>
             </div>
 
             {activeBrowseTab === 'collections' ? (
@@ -753,6 +816,69 @@ export const Sidebar = ({
             )}
           </div>
         </div>
+
+        {/* Dynamic View All Button (shared across Collections & Tags while header is sticky) */}
+        {isHeaderSticky && (
+          <div
+            data-testid="sidebar-view-all-container"
+            style={{
+              padding: '8px 14px',
+              borderTop: `1px solid ${colors.borderLight}`,
+              backgroundColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
+              flexShrink: 0,
+            }}
+          >
+            <button
+              type="button"
+              data-testid="sidebar-view-all-btn"
+              data-active-tab={activeBrowseTab}
+              onClick={() =>
+                handleItemSelect(() =>
+                  activeBrowseTab === 'tags' ? onOpenAllTags?.() : onOpenAllCollections?.()
+                )
+              }
+              title={activeBrowseTab === 'tags' ? 'View All Tags' : 'View All Collections'}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                border: isViewAllActive
+                  ? `1.5px solid ${colors.accent}`
+                  : `1px solid ${isDark ? '#262633' : colors.border}`,
+                backgroundColor: isViewAllActive
+                  ? (isDark ? 'rgba(99, 102, 241, 0.18)' : colors.accentLight)
+                  : (isDark ? '#16161f' : '#ffffff'),
+                color: isViewAllActive ? (isDark ? '#e0e7ff' : colors.accent) : colors.text,
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                outline: 'none',
+                transition: 'all 0.16s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!isViewAllActive) {
+                  e.currentTarget.style.backgroundColor = isDark ? '#1f1f2b' : colors.accentLight;
+                  e.currentTarget.style.borderColor = colors.accent;
+                  e.currentTarget.style.color = isDark ? '#e0e7ff' : colors.accent;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isViewAllActive) {
+                  e.currentTarget.style.backgroundColor = isDark ? '#16161f' : '#ffffff';
+                  e.currentTarget.style.borderColor = isDark ? '#262633' : colors.border;
+                  e.currentTarget.style.color = colors.text;
+                }
+              }}
+            >
+              <span>View All</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
 
         {/* Bottom 3-Button Quick-Access Layout (Profile, Social, Chat) */}
         <div
