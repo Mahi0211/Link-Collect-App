@@ -138,37 +138,36 @@ async function runTagsPageVerification() {
       JSON.stringify(orderedDeckStats)
     );
 
-    // 2. Verify AI-Research deck has 5 uniform populated cards (no Open Deck, bigger front card, no front link title)
+    // 2. Verify AI-Research deck has 5 orbiting wing cards + solid front showcase card (no Open Deck, no front title)
     const firstDeck = page.locator('[data-testid="tag-deck-AI-Research"]').first();
     const previewCardDetails = await firstDeck.evaluate((el) => {
-      const slotCards = Array.from(el.querySelectorAll('[data-card-slot]'));
-      const centerCard = el.querySelector('[data-card-slot="0"]');
-      const leftCard = el.querySelector('[data-card-slot="1"]');
-      const outerRightCard = el.querySelector('[data-card-slot="3"]');
+      const wingCards = Array.from(el.querySelectorAll('.lc-wing-card'));
+      const frontCard = el.querySelector('.lc-front-card');
+      const leftCard = el.querySelector('.lc-wing-inner-left');
+      const outerRightCard = el.querySelector('.lc-wing-outer-right');
       const deckText = el.textContent || '';
-      const centerFooter = centerCard?.querySelector('[data-card-footer="true"]');
+      const frontText = frontCard?.textContent || '';
       const leftStyle = getComputedStyle(leftCard);
-      const centerStyle = getComputedStyle(centerCard);
+      const outerStyle = getComputedStyle(outerRightCard);
       return {
-        slotCount: slotCards.length,
+        slotCount: wingCards.length,
         hasOpenDeckBtn: deckText.includes('Open Deck'),
-        frontFooterVisible: centerFooter ? Number(getComputedStyle(centerFooter).opacity) > 0.01 : false,
-        invariantBoxSizes: leftStyle.width === centerStyle.width && leftStyle.height === centerStyle.height,
-        frontCardRect: centerCard?.getBoundingClientRect(),
-        leftCardRect: leftCard?.getBoundingClientRect(),
+        frontCardHasLinkTitle: frontText.includes('Attention Is All You Need Paper'),
+        invariantBoxSizes: leftStyle.width === outerStyle.width && leftStyle.height === outerStyle.height,
+        frontCardRect: frontCard?.getBoundingClientRect(),
         deckRect: el.getBoundingClientRect(),
         outerRightText: outerRightCard?.textContent || '',
         beforeStep: el.getAttribute('data-front-card-step'),
         beforeFrontLink: el.getAttribute('data-front-link-id'),
         beforeLeftTransform: leftStyle.transform,
-        beforeCenterTransform: centerStyle.transform,
+        beforeCenterTransform: getComputedStyle(frontCard).transform,
       };
     });
     assert(
-      'Tag deck renders 5 uniform GPU cards (invariant box sizes), bigger unobstructed front card, no Open Deck',
+      'Tag deck renders 5 populated wing cards + solid bigger front card without title or Open Deck',
       previewCardDetails.slotCount === 5 &&
         !previewCardDetails.hasOpenDeckBtn &&
-        !previewCardDetails.frontFooterVisible &&
+        !previewCardDetails.frontCardHasLinkTitle &&
         previewCardDetails.invariantBoxSizes &&
         previewCardDetails.frontCardRect.width >= 180 &&
         previewCardDetails.deckRect.height <= 260 &&
@@ -176,7 +175,7 @@ async function runTagsPageVerification() {
       JSON.stringify({
         slotCount: previewCardDetails.slotCount,
         hasOpenDeckBtn: previewCardDetails.hasOpenDeckBtn,
-        frontFooterVisible: previewCardDetails.frontFooterVisible,
+        frontCardHasLinkTitle: previewCardDetails.frontCardHasLinkTitle,
         invariantBoxSizes: previewCardDetails.invariantBoxSizes,
         frontWidth: Math.round(previewCardDetails.frontCardRect.width),
         deckHeight: Math.round(previewCardDetails.deckRect.height),
@@ -199,12 +198,13 @@ async function runTagsPageVerification() {
       JSON.stringify({ before: previewCardDetails.beforeFrontLink, after: rotatedState.afterFrontLink, step: rotatedState.afterStep })
     );
 
-    // 4. Test hover animation spreads outer wings and lifts center card cleanly
+    // 4. Wait for 720ms animation settle, then verify hover animation spreads wings and lifts front card
+    await page.waitForTimeout(800);
     await firstDeck.hover();
-    await page.waitForTimeout(550);
+    await page.waitForTimeout(760);
     const hoverTransforms = await firstDeck.evaluate((el) => ({
-      afterLeftTransform: getComputedStyle(el.querySelector('[data-card-slot="1"]')).transform,
-      afterCenterTransform: getComputedStyle(el.querySelector('[data-card-slot="0"]')).transform,
+      afterLeftTransform: getComputedStyle(el.querySelector('.lc-wing-inner-left')).transform,
+      afterCenterTransform: getComputedStyle(el.querySelector('.lc-front-card')).transform,
     }));
     assert(
       'Hovering tag deck animates center elevation and 5-card fan spread',

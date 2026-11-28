@@ -21,14 +21,15 @@ const DECK_ACCENT_PALETTES = [
   { rim: '#7DD3FC', rimDark: '#0284C7', glow: 'rgba(56, 189, 248, 0.34)', gem: '#A78BFA', crestBg: 'rgba(167, 139, 250, 0.18)' },
 ];
 
-// Maps circular slot index 0..4 to symmetric CSS fan slot classes
-// Ring order: 0 (Center) -> 1 (Inner Left) -> 2 (Outer Left) -> 3 (Outer Right) -> 4 (Inner Right) -> 0
-const SLOT_CLASS_BY_INDEX = [
-  'lc-slot-center',
-  'lc-slot-inner-left',
-  'lc-slot-outer-left',
-  'lc-slot-outer-right',
-  'lc-slot-inner-right',
+// Circular slot mapping behind the solid center showcase card:
+// 0 = docked behind center (currently spotlighted in front frame),
+// 1 = Inner Left, 2 = Outer Left, 3 = Outer Right, 4 = Inner Right
+const WING_SLOT_CLASS = [
+  'lc-wing-docked',
+  'lc-wing-inner-left',
+  'lc-wing-outer-left',
+  'lc-wing-outer-right',
+  'lc-wing-inner-right',
 ];
 
 const getDeckPalette = (tag) => {
@@ -60,7 +61,7 @@ const formatCompactMetric = (item, rankMode) => {
   return null;
 };
 
-function CardArtwork({ item, compact = false }) {
+const CardArtwork = React.memo(function CardArtwork({ item, compact = false }) {
   const url = item?.url || item?.link || '';
   const preview = useMemo(() => getLinkPreviewData(url, item?.thumbnailUrl), [url, item?.thumbnailUrl]);
   const faviconUrl = useMemo(() => getFaviconUrl(url), [url]);
@@ -141,7 +142,7 @@ function CardArtwork({ item, compact = false }) {
       )}
     </div>
   );
-}
+});
 
 function CrestEmblem({ trimColor, gemColor }) {
   return (
@@ -172,10 +173,8 @@ function CrestEmblem({ trimColor, gemColor }) {
   );
 }
 
-// Unified GPU-composited card: all 5 slots keep invariant 184x194px layout dimensions and animate
-// purely via compositor transform/opacity so 3s carousel swaps run cleanly at 60fps without reflows.
-const DeckLinkCard = React.memo(function DeckLinkCard({ item, rankNumber, slotIndex, rankMode, palette, isDark }) {
-  const isCenter = slotIndex === 0;
+// Orbiting fan card with invariant layout dimensions — moves exclusively via GPU translate3d & opacity
+const DeckWingCard = React.memo(function DeckWingCard({ item, rankNumber, slotIndex, rankMode, palette, isDark }) {
   const metric = formatCompactMetric(item, rankMode);
   const title = item.title || getPageTitle(item.url || item.link);
   const domain = item.domain || getDomainName(item.url || item.link);
@@ -189,151 +188,102 @@ const DeckLinkCard = React.memo(function DeckLinkCard({ item, rankNumber, slotIn
     <div
       data-card-slot={slotIndex}
       data-card-rank={rankNumber}
-      className={`lc-slot-card ${SLOT_CLASS_BY_INDEX[slotIndex]}`}
+      className={`lc-wing-card ${WING_SLOT_CLASS[slotIndex]}`}
       style={{
         position: 'absolute',
-        width: '184px',
-        height: '194px',
-        borderRadius: '15px',
+        width: '132px',
+        height: '168px',
+        borderRadius: '13px',
         background: frameBg,
-        border: `2px solid ${trimColor}`,
-        padding: '5px',
+        border: `1.5px solid ${trimColor}`,
+        padding: '4px',
         boxSizing: 'border-box',
         overflow: 'hidden',
         boxShadow: isDark
-          ? '0 14px 28px rgba(0, 0, 0, 0.68)'
-          : '0 12px 24px rgba(15, 23, 42, 0.16)',
+          ? '0 10px 20px rgba(0, 0, 0, 0.58)'
+          : '0 8px 18px rgba(15, 23, 42, 0.14)',
+        display: 'flex',
+        flexDirection: 'column',
+        pointerEvents: 'none',
       }}
     >
       <div
-        className="lc-foil-sheen"
-        aria-hidden="true"
-        style={{ opacity: isCenter ? 1 : 0 }}
-      />
-
-      <div
         style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          borderRadius: '10px',
+          flex: 1,
+          borderRadius: '9px',
           border: `1px solid ${trimColor}`,
           overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
           backgroundColor: surfaceBg,
         }}
       >
-        {/* Fixed-height upper thumbnail showcase (identical geometry in every slot) */}
         <div
           style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '124px',
-            overflow: 'hidden',
-            borderBottom: `1.5px solid ${trimColor}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '3px 6px',
+            backgroundColor: isDark ? 'rgba(0,0,0,0.45)' : 'rgba(15,23,42,0.04)',
+            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.07)'}`,
+            gap: '4px',
+            flexShrink: 0,
           }}
         >
-          <CardArtwork item={item} />
-
-          <div
-            aria-hidden="true"
+          <span
             style={{
-              position: 'absolute',
-              inset: 0,
-              background: isDark
-                ? 'linear-gradient(180deg, rgba(12,12,18,0.34) 0%, transparent 45%, rgba(16,15,22,0.42) 100%)'
-                : 'linear-gradient(180deg, rgba(15,23,42,0.24) 0%, transparent 45%, rgba(15,23,42,0.28) 100%)',
-            }}
-          />
-
-          {/* Floating Rank / Metric Badges (solid high-contrast pill — zero backdrop-filter stall) */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '6px',
-              left: '6px',
-              right: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '4px',
-              zIndex: 2,
+              fontSize: '8.5px',
+              fontWeight: '800',
+              color: trimColor,
+              letterSpacing: '0.02em',
             }}
           >
+            #{rankNumber}
+          </span>
+          {metric ? (
             <span
               style={{
-                fontSize: '9.5px',
-                fontWeight: '800',
-                padding: '2px 7px',
-                borderRadius: '999px',
-                backgroundColor: 'rgba(10, 10, 16, 0.86)',
-                color: trimColor,
-                border: `1px solid ${trimColor}`,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px',
+                fontSize: '8.5px',
+                fontWeight: '700',
+                color: metric.icon === 'star' ? '#FBBF24' : '#38BDF8',
               }}
             >
-              {isCenter ? `TOP #${rankNumber}` : `#${rankNumber}`}
+              {metric.icon === 'star' ? <Star size={8} fill="currentColor" /> : <Eye size={8} />}
+              {metric.text}
             </span>
-            {metric ? (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '2px',
-                  fontSize: '9.5px',
-                  fontWeight: '700',
-                  padding: '2px 7px',
-                  borderRadius: '999px',
-                  backgroundColor: 'rgba(10, 10, 16, 0.86)',
-                  color: metric.icon === 'star' ? '#FBBF24' : '#38BDF8',
-                }}
-              >
-                {metric.icon === 'star' ? <Star size={9} fill="currentColor" /> : <Eye size={9} />}
-                {metric.text}
-              </span>
-            ) : (
-              <span
-                style={{
-                  fontSize: '9px',
-                  fontWeight: '600',
-                  padding: '2px 6px',
-                  borderRadius: '999px',
-                  backgroundColor: 'rgba(10, 10, 16, 0.8)',
-                  color: '#e2e8f0',
-                  maxWidth: '72px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {domain}
-              </span>
-            )}
-          </div>
+          ) : (
+            <span
+              style={{
+                fontSize: '8px',
+                color: isDark ? '#94a3b8' : '#64748b',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {domain}
+            </span>
+          )}
         </div>
 
-        {/* Lower card title strip smoothly fades out when card enters Center slot behind tag nameplate */}
+        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+          <CardArtwork item={item} compact />
+        </div>
+
         <div
-          data-card-footer="true"
           style={{
-            position: 'absolute',
-            top: '124px',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            padding: '7px 9px',
+            padding: '5px 6px',
             backgroundColor: surfaceBg,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            opacity: isCenter ? 0 : 1,
-            transition: 'opacity 0.28s ease',
-            pointerEvents: 'none',
+            borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'}`,
+            flexShrink: 0,
           }}
         >
           <div
             style={{
-              fontSize: '11px',
+              fontSize: '9.5px',
               fontWeight: '600',
               lineHeight: '1.22',
               color: isDark ? '#f4f4f5' : '#0f172a',
@@ -347,8 +297,8 @@ const DeckLinkCard = React.memo(function DeckLinkCard({ item, rankNumber, slotIn
           </div>
           <div
             style={{
-              marginTop: '3px',
-              fontSize: '9px',
+              marginTop: '2px',
+              fontSize: '8px',
               color: isDark ? '#71717a' : '#94a3b8',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -369,8 +319,8 @@ const TagDeckCard = React.memo(function TagDeckCard({ tagEntry, rankIndex, rankM
   const palette = useMemo(() => getDeckPalette(tagEntry.tag), [tagEntry.tag]);
   const trimColor = isDark ? palette.rim : palette.rimDark;
 
-  // Arrange up to 5 real cards into visual slots:
-  // Ring index i: 0=Center(#1), 1=InnerLeft(#2), 2=OuterLeft(#4), 3=OuterRight(#5), 4=InnerRight(#3)
+  // Arrange 5 cards around the circular deck:
+  // Ring index i: 0=FrontShowcase(#1), 1=InnerLeft(#2), 2=OuterLeft(#4), 3=OuterRight(#5), 4=InnerRight(#3)
   const slotItems = useMemo(() => {
     const src = tagEntry.topLinks;
     const len = src.length;
@@ -383,8 +333,10 @@ const TagDeckCard = React.memo(function TagDeckCard({ tagEntry, rankIndex, rankM
   }, [tagEntry.topLinks]);
 
   const rotationStep = tagEntry.topLinks.length > 1 ? activeRotation % 5 : 0;
-  const frontCardIndex = (5 - rotationStep) % 5;
-  const frontItem = slotItems[frontCardIndex]?.item;
+  const frontRingIndex = (5 - rotationStep) % 5;
+  const frontEntry = slotItems[frontRingIndex] || slotItems[0];
+  const frontItem = frontEntry?.item;
+  const frontMetric = frontItem ? formatCompactMetric(frontItem, rankMode) : null;
 
   return (
     <button
@@ -441,12 +393,12 @@ const TagDeckCard = React.memo(function TagDeckCard({ tagEntry, rankIndex, rankM
           }}
         />
 
-        {/* All 5 Uniform Collector Cards Rotating Around the Deck Every 3 Seconds */}
+        {/* Orbiting Wings Moving Smoothly on GPU Behind the Solid Center Card Frame */}
         {slotItems.map((entry, ringIdx) => {
           const slotIndex = (ringIdx + rotationStep) % 5;
           return (
-            <DeckLinkCard
-              key={`slot-card-${ringIdx}`}
+            <DeckWingCard
+              key={`wing-card-${ringIdx}`}
               item={entry.item}
               rankNumber={entry.rankNumber}
               slotIndex={slotIndex}
@@ -457,77 +409,191 @@ const TagDeckCard = React.memo(function TagDeckCard({ tagEntry, rankIndex, rankM
           );
         })}
 
-        {/* Centered Collector Crest & Compact Tag Nameplate Anchored Over Front Card Lower Section */}
+        {/* Rock-Solid Front Hero Card Frame (Never Splits or Exposes Sharp Corners) */}
         <div
-          className="lc-center-nameplate"
+          data-front-showcase="true"
+          className="lc-front-card"
           style={{
-            position: 'absolute',
-            zIndex: 6,
-            width: '170px',
-            height: '180px',
+            position: 'relative',
+            zIndex: 4,
+            width: '184px',
+            height: '194px',
+            borderRadius: '15px',
+            background: isDark
+              ? 'linear-gradient(175deg, #211f29 0%, #121117 100%)'
+              : 'linear-gradient(175deg, #fbfaf6 0%, #efeadd 100%)',
+            border: `2px solid ${trimColor}`,
+            padding: '5px',
+            boxSizing: 'border-box',
+            overflow: 'hidden',
+            boxShadow: isDark
+              ? '0 18px 34px rgba(0, 0, 0, 0.72)'
+              : '0 14px 28px rgba(15, 23, 42, 0.18)',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'flex-end',
-            pointerEvents: 'none',
           }}
         >
+          <div className="lc-foil-sheen" aria-hidden="true" />
+
           <div
             style={{
-              position: 'relative',
-              height: '58px',
-              borderRadius: '0 0 9px 9px',
-              borderTop: `1.5px solid ${trimColor}`,
-              background: isDark
-                ? 'linear-gradient(180deg, #191822 0%, #111017 100%)'
-                : 'linear-gradient(180deg, #ffffff 0%, #f5f2e9 100%)',
+              flex: 1,
+              borderRadius: '10px',
+              border: `1px solid ${trimColor}`,
+              backgroundColor: isDark ? '#14131a' : '#ffffff',
+              overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '13px 8px 5px 8px',
-              boxSizing: 'border-box',
-              textAlign: 'center',
+              position: 'relative',
             }}
           >
+            {/* Enlarged Front Thumbnail Showcase Window with Crossfading Pre-Decoded Layers */}
             <div
               style={{
-                position: 'absolute',
-                top: '-17px',
-                left: '50%',
-                transform: 'translateX(-50%)',
+                position: 'relative',
+                height: '124px',
+                overflow: 'hidden',
+                borderBottom: `1.5px solid ${trimColor}`,
+              }}
+            >
+              {slotItems.map((entry, ringIdx) => {
+                const isActive = ringIdx === frontRingIndex;
+                return (
+                  <div
+                    key={`front-slide-${ringIdx}`}
+                    className="lc-front-thumb-slide"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      opacity: isActive ? 1 : 0,
+                      transform: isActive ? 'translate3d(0, 0, 0) scale(1)' : 'translate3d(0, 0, 0) scale(1.06)',
+                      zIndex: isActive ? 2 : 1,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <CardArtwork item={entry.item} />
+                  </div>
+                );
+              })}
+
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 3,
+                  background: isDark
+                    ? 'linear-gradient(180deg, rgba(12,12,18,0.34) 0%, transparent 45%, rgba(16,15,22,0.42) 100%)'
+                    : 'linear-gradient(180deg, rgba(15,23,42,0.24) 0%, transparent 45%, rgba(15,23,42,0.28) 100%)',
+                }}
+              />
+
+              {/* Front Top Micro Badges (no link title overlay) */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '5px',
+                  left: '6px',
+                  right: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '4px',
+                  zIndex: 4,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '9px',
+                    fontWeight: '800',
+                    padding: '2px 7px',
+                    borderRadius: '999px',
+                    backgroundColor: 'rgba(10, 10, 16, 0.86)',
+                    color: trimColor,
+                    border: `1px solid ${trimColor}`,
+                  }}
+                >
+                  TOP #{frontEntry?.rankNumber || 1}
+                </span>
+                {frontMetric && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '2px',
+                      fontSize: '9px',
+                      fontWeight: '700',
+                      padding: '2px 7px',
+                      borderRadius: '999px',
+                      backgroundColor: 'rgba(10, 10, 16, 0.86)',
+                      color: frontMetric.icon === 'star' ? '#FBBF24' : '#38BDF8',
+                    }}
+                  >
+                    {frontMetric.icon === 'star' ? <Star size={9} fill="currentColor" /> : <Eye size={9} />}
+                    {frontMetric.text}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Central Bridging Crest Medallion */}
+            <div
+              style={{
+                position: 'relative',
+                height: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 5,
               }}
             >
               <CrestEmblem trimColor={trimColor} gemColor={palette.gem} />
             </div>
 
+            {/* Compact Sculpted Tag Nameplate */}
             <div
               style={{
-                width: '100%',
-                fontSize: '13px',
-                fontWeight: '800',
-                fontFamily: 'var(--font-heading)',
-                color: isDark ? '#F8FAFC' : '#0F172A',
-                letterSpacing: '-0.015em',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                lineHeight: '1.15',
+                flex: 1,
+                padding: '15px 8px 6px 8px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                background: isDark
+                  ? 'linear-gradient(180deg, #191822 0%, #111017 100%)'
+                  : 'linear-gradient(180deg, #ffffff 0%, #f5f2e9 100%)',
               }}
             >
-              #{tagEntry.tag}
-            </div>
-            <div
-              style={{
-                marginTop: '2px',
-                fontSize: '10px',
-                fontWeight: '700',
-                color: isDark ? palette.rim : palette.rimDark,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-                lineHeight: '1.1',
-              }}
-            >
-              {tagEntry.count} {tagEntry.count === 1 ? 'Link' : 'Links'}
+              <div
+                style={{
+                  width: '100%',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  fontFamily: 'var(--font-heading)',
+                  color: isDark ? '#F8FAFC' : '#0F172A',
+                  letterSpacing: '-0.015em',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  lineHeight: '1.15',
+                }}
+              >
+                #{tagEntry.tag}
+              </div>
+              <div
+                style={{
+                  marginTop: '2px',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  color: isDark ? palette.rim : palette.rimDark,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  lineHeight: '1.1',
+                }}
+              >
+                {tagEntry.count} {tagEntry.count === 1 ? 'Link' : 'Links'}
+              </div>
             </div>
           </div>
         </div>
@@ -666,48 +732,54 @@ export function TagsPage({ links = [], onSelectTag, onBack, theme = 'dark' }) {
         .lc-tag-deck {
           contain: layout style;
         }
-        .lc-tag-deck .lc-slot-card,
-        .lc-tag-deck .lc-center-nameplate,
+        .lc-tag-deck .lc-wing-card,
+        .lc-tag-deck .lc-front-card,
         .lc-tag-deck .lc-deck-crest,
         .lc-tag-deck .lc-deck-aura {
           will-change: transform, opacity;
           backface-visibility: hidden;
           transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1),
-                      opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+                      opacity 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .lc-tag-deck .lc-front-thumb-slide {
+          will-change: transform, opacity;
+          backface-visibility: hidden;
+          transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+                      opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        /* 5-Card Pure GPU Symmetrical Slot Coordinates (Zero Layout Reflow) */
-        .lc-tag-deck .lc-slot-center {
-          z-index: 4;
-          opacity: 1;
-          transform: translate3d(0px, -2px, 0) rotate(0deg) scale(1);
-        }
-        .lc-tag-deck .lc-slot-inner-left {
-          z-index: 2;
-          opacity: 0.98;
-          transform-origin: 50% 88%;
-          transform: translate3d(-52px, 6px, 0) rotate(-13deg) scale(0.8);
-        }
-        .lc-tag-deck .lc-slot-inner-right {
-          z-index: 2;
-          opacity: 0.98;
-          transform-origin: 50% 88%;
-          transform: translate3d(52px, 6px, 0) rotate(13deg) scale(0.8);
-        }
-        .lc-tag-deck .lc-slot-outer-left {
-          z-index: 1;
-          opacity: 0.9;
-          transform-origin: 50% 90%;
-          transform: translate3d(-76px, 14px, 0) rotate(-21deg) scale(0.72);
-        }
-        .lc-tag-deck .lc-slot-outer-right {
-          z-index: 0;
-          opacity: 0.9;
-          transform-origin: 50% 90%;
-          transform: translate3d(76px, 14px, 0) rotate(21deg) scale(0.72);
-        }
-        .lc-tag-deck .lc-center-nameplate {
+        /* 5-Card Pure GPU Symmetrical Orbit Behind Center Hero Frame */
+        .lc-tag-deck .lc-front-card {
           transform: translate3d(0px, -2px, 0) scale(1);
+        }
+        .lc-tag-deck .lc-wing-docked {
+          z-index: 2;
+          opacity: 0;
+          transform: translate3d(0px, 0px, 0) rotate(0deg) scale(0.86);
+        }
+        .lc-tag-deck .lc-wing-inner-left {
+          z-index: 2;
+          opacity: 0.98;
+          transform-origin: 50% 88%;
+          transform: translate3d(-54px, 5px, 0) rotate(-13deg) scale(0.95);
+        }
+        .lc-tag-deck .lc-wing-inner-right {
+          z-index: 2;
+          opacity: 0.98;
+          transform-origin: 50% 88%;
+          transform: translate3d(54px, 5px, 0) rotate(13deg) scale(0.95);
+        }
+        .lc-tag-deck .lc-wing-outer-left {
+          z-index: 1;
+          opacity: 0.92;
+          transform-origin: 50% 90%;
+          transform: translate3d(-76px, 14px, 0) rotate(-21deg) scale(0.88);
+        }
+        .lc-tag-deck .lc-wing-outer-right {
+          z-index: 0;
+          opacity: 0.92;
+          transform-origin: 50% 90%;
+          transform: translate3d(76px, 14px, 0) rotate(21deg) scale(0.88);
         }
 
         /* Clipped Metallic Foil Sheen */
@@ -723,7 +795,7 @@ export function TagsPage({ links = [], onSelectTag, onBack, theme = 'dark' }) {
           transform: translate3d(-110%, 0, 0) rotate(14deg);
           pointer-events: none;
           z-index: 6;
-          transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+          transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         /* Synchronized Hover & Keyboard Focus Fan Spread (Pure GPU Transform) */
@@ -731,30 +803,26 @@ export function TagsPage({ links = [], onSelectTag, onBack, theme = 'dark' }) {
         .lc-tag-deck:focus-visible .lc-deck-aura {
           opacity: 0.78;
         }
-        .lc-tag-deck:hover .lc-slot-center,
-        .lc-tag-deck:focus-visible .lc-slot-center {
-          transform: translate3d(0px, -9px, 0) rotate(0deg) scale(1.04);
-        }
-        .lc-tag-deck:hover .lc-center-nameplate,
-        .lc-tag-deck:focus-visible .lc-center-nameplate {
+        .lc-tag-deck:hover .lc-front-card,
+        .lc-tag-deck:focus-visible .lc-front-card {
           transform: translate3d(0px, -9px, 0) scale(1.04);
         }
-        .lc-tag-deck:hover .lc-slot-inner-left,
-        .lc-tag-deck:focus-visible .lc-slot-inner-left {
-          transform: translate3d(-66px, -3px, 0) rotate(-17deg) scale(0.84);
+        .lc-tag-deck:hover .lc-wing-inner-left,
+        .lc-tag-deck:focus-visible .lc-wing-inner-left {
+          transform: translate3d(-66px, -4px, 0) rotate(-17deg) scale(0.99);
         }
-        .lc-tag-deck:hover .lc-slot-inner-right,
-        .lc-tag-deck:focus-visible .lc-slot-inner-right {
-          transform: translate3d(66px, -3px, 0) rotate(17deg) scale(0.84);
+        .lc-tag-deck:hover .lc-wing-inner-right,
+        .lc-tag-deck:focus-visible .lc-wing-inner-right {
+          transform: translate3d(66px, -4px, 0) rotate(17deg) scale(0.99);
         }
-        .lc-tag-deck:hover .lc-slot-outer-left,
-        .lc-tag-deck:focus-visible .lc-slot-outer-left {
-          transform: translate3d(-92px, 6px, 0) rotate(-26deg) scale(0.76);
+        .lc-tag-deck:hover .lc-wing-outer-left,
+        .lc-tag-deck:focus-visible .lc-wing-outer-left {
+          transform: translate3d(-92px, 6px, 0) rotate(-26deg) scale(0.93);
           opacity: 0.98;
         }
-        .lc-tag-deck:hover .lc-slot-outer-right,
-        .lc-tag-deck:focus-visible .lc-slot-outer-right {
-          transform: translate3d(92px, 6px, 0) rotate(26deg) scale(0.76);
+        .lc-tag-deck:hover .lc-wing-outer-right,
+        .lc-tag-deck:focus-visible .lc-wing-outer-right {
+          transform: translate3d(92px, 6px, 0) rotate(26deg) scale(0.93);
           opacity: 0.98;
         }
         .lc-tag-deck:hover .lc-deck-crest,
