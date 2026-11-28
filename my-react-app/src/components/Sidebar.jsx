@@ -62,6 +62,7 @@ export const Sidebar = ({
 
   const isProfileActive = activeView === 'editProfile';
   const isChatActive = activeView === 'chat';
+  const [hoveredViewId, setHoveredViewId] = useState(null);
 
   // Responsive mobile detector
   const [isMobile, setIsMobile] = useState(() => {
@@ -87,14 +88,139 @@ export const Sidebar = ({
   };
 
   const systemViews = [
-    { id: 'all', label: 'All Bookmarks', icon: BookOpen, count: totalLinkCount, color: colors.accent },
-    { id: 'favorites', label: 'Favorites', icon: Heart, count: favoriteCount, color: colors.favorite },
-    { id: 'topRated', label: 'Top Rated', icon: Star, count: topRatedCount, color: colors.rating },
-    { id: 'rewatchWorthy', label: 'Rewatch Worthy', icon: Flame, count: rewatchCount, color: colors.rewatch },
-    { id: 'watched', label: 'Already Watched', icon: CheckCircle, count: watchedCount, color: colors.watched },
-    { id: 'readLater', label: 'Read Later', icon: Clock, count: readLaterCount, color: colors.readLater },
-    { id: 'archive', label: 'Archive', icon: Archive, count: archiveCount, color: colors.textSecondary }
+    { id: 'all', label: 'All Bookmarks', icon: BookOpen, count: totalLinkCount, color: colors.accent, lightColor: colors.accentLight },
+    { id: 'favorites', label: 'Favorites', icon: Heart, count: favoriteCount, color: colors.favorite, lightColor: colors.favoriteLight },
+    { id: 'topRated', label: 'Top Rated', icon: Star, count: topRatedCount, color: colors.rating, lightColor: colors.ratingLight },
+    { id: 'rewatchWorthy', label: 'Rewatch Worthy', icon: Flame, count: rewatchCount, color: colors.rewatch, lightColor: colors.rewatchLight },
+    { id: 'watched', label: 'Already Watched', icon: CheckCircle, count: watchedCount, color: colors.watched, lightColor: colors.watchedLight },
+    { id: 'readLater', label: 'Read Later', icon: Clock, count: readLaterCount, color: colors.readLater, lightColor: colors.readLaterLight },
+    {
+      id: 'archive',
+      label: 'Archive',
+      icon: Archive,
+      count: archiveCount,
+      color: colors.textSecondary,
+      lightColor: isDark ? 'rgba(161, 161, 170, 0.14)' : 'rgba(71, 85, 105, 0.1)',
+    }
   ];
+
+  const primaryQuickView = systemViews[0];
+  const bentoQuickViews = systemViews.slice(1);
+
+  const renderQuickViewCard = (item, isFullWidth = false) => {
+    const Icon = item.icon;
+    const isSelected = activeView === item.id;
+    const isHovered = hoveredViewId === item.id;
+    const isHighlighted = isSelected || isHovered;
+    const sectionColor = item.color || colors.accent;
+    const sectionTint = item.lightColor || colors.accentLight;
+
+    const countBadge = (
+      <span
+        style={{
+          fontSize: '11px',
+          padding: '2px 7px',
+          borderRadius: '9999px',
+          backgroundColor: isHighlighted
+            ? (isDark ? 'rgba(0, 0, 0, 0.3)' : '#ffffff')
+            : (isDark ? colors.bgTertiary : '#f1f5f9'),
+          border: `1px solid ${isHighlighted ? `${sectionColor}55` : 'transparent'}`,
+          color: isHighlighted ? sectionColor : colors.textTertiary,
+          fontWeight: '600',
+          lineHeight: '1.35',
+          flexShrink: 0,
+          transition: 'all 0.18s ease',
+        }}
+      >
+        {Number(item.count || 0).toLocaleString()}
+      </span>
+    );
+
+    return (
+      <button
+        key={item.id}
+        type="button"
+        onClick={() => handleItemSelect(() => onSelectView(item.id))}
+        onMouseEnter={() => setHoveredViewId(item.id)}
+        onMouseLeave={() => setHoveredViewId((prev) => (prev === item.id ? null : prev))}
+        title={item.label}
+        style={{
+          display: 'flex',
+          flexDirection: isFullWidth ? 'row' : 'column',
+          alignItems: isFullWidth ? 'center' : 'stretch',
+          justifyContent: 'space-between',
+          gap: '10px',
+          padding: isFullWidth ? '10px 12px' : '11px 10px',
+          borderRadius: '11px',
+          border: `1px solid ${isSelected ? sectionColor : (isHovered ? `${sectionColor}99` : colors.border)}`,
+          backgroundColor: isHighlighted
+            ? sectionTint
+            : (isDark ? colors.cardBg : '#ffffff'),
+          color: isHighlighted ? colors.text : colors.textSecondary,
+          cursor: 'pointer',
+          transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+          textAlign: 'left',
+          width: '100%',
+          minWidth: 0,
+          boxShadow: isHighlighted
+            ? `0 2px 10px ${sectionTint}`
+            : (isDark ? 'none' : colors.shadowSm),
+          outline: 'none',
+        }}
+      >
+        {isFullWidth ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
+              <Icon size={16} style={{ color: sectionColor, flexShrink: 0 }} />
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: isHighlighted ? '600' : '500',
+                  color: isHighlighted ? colors.text : colors.textSecondary,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {item.label}
+              </span>
+            </div>
+            {countBadge}
+          </>
+        ) : (
+          <>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                gap: '6px',
+              }}
+            >
+              <Icon size={16} style={{ color: sectionColor, flexShrink: 0 }} />
+              {countBadge}
+            </div>
+            <span
+              style={{
+                fontSize: '11.5px',
+                fontWeight: isHighlighted ? '600' : '500',
+                color: isHighlighted ? colors.text : colors.textSecondary,
+                letterSpacing: '-0.015em',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                display: 'block',
+                width: '100%',
+              }}
+            >
+              {item.label}
+            </span>
+          </>
+        )}
+      </button>
+    );
+  };
 
   return (
     <>
@@ -238,7 +364,7 @@ export const Sidebar = ({
           }}
         >
           {/* Quick Views */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <span
               style={{
                 fontSize: '11px',
@@ -246,78 +372,23 @@ export const Sidebar = ({
                 color: colors.textTertiary,
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
-                padding: '0 8px 6px 8px',
+                padding: '0 6px 2px 6px',
               }}
             >
               Quick Views
             </span>
 
-            {systemViews.map((item) => {
-              const Icon = item.icon;
-              const isSelected = activeView === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleItemSelect(() => onSelectView(item.id))}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: isSelected
-                      ? (isDark ? 'rgba(99, 102, 241, 0.14)' : 'rgba(79, 70, 229, 0.08)')
-                      : 'transparent',
-                    color: isSelected ? colors.accent : colors.textSecondary,
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: isSelected ? '600' : '500',
-                    transition: 'all 0.15s ease',
-                    textAlign: 'left',
-                    width: '100%',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.backgroundColor = isDark ? '#1a1a22' : '#f1f5f9';
-                      e.currentTarget.style.color = colors.text;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = colors.textSecondary;
-                    }
-                  }}
-                >
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
-                  >
-                    <Icon
-                      size={16}
-                      style={{
-                        color: isSelected ? colors.accent : (item.color || colors.textTertiary)
-                      }}
-                    />
-                    <span>{item.label}</span>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      padding: '2px 6px',
-                      borderRadius: '10px',
-                      backgroundColor: isSelected
-                        ? (isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(79, 70, 229, 0.15)')
-                        : (isDark ? '#1f1f26' : '#f1f5f9'),
-                      color: isSelected ? colors.accent : colors.textTertiary,
-                      fontWeight: '600',
-                    }}
-                  >
-                    {item.count}
-                  </span>
-                </button>
-              );
-            })}
+            {renderQuickViewCard(primaryQuickView, true)}
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: '8px',
+              }}
+            >
+              {bentoQuickViews.map((item) => renderQuickViewCard(item, false))}
+            </div>
           </div>
 
           {/* User Collections */}
