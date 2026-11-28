@@ -83,6 +83,7 @@ function CardArtwork({ item, compact = false }) {
           src={src}
           alt={item?.title || domain}
           loading="lazy"
+          decoding="async"
           referrerPolicy="no-referrer"
           onError={() => {
             if (preview.fallbackThumbnailUrl && src !== preview.fallbackThumbnailUrl) {
@@ -171,9 +172,9 @@ function CrestEmblem({ trimColor, gemColor }) {
   );
 }
 
-// Unified 5-card component: all 5 slots share the exact same collectible card structure;
-// whichever card rotates into slot 0 expands smoothly as the front hero thumbnail card.
-function DeckLinkCard({ item, rankNumber, slotIndex, rankMode, palette, isDark }) {
+// Unified GPU-composited card: all 5 slots keep invariant 184x194px layout dimensions and animate
+// purely via compositor transform/opacity so 3s carousel swaps run cleanly at 60fps without reflows.
+const DeckLinkCard = React.memo(function DeckLinkCard({ item, rankNumber, slotIndex, rankMode, palette, isDark }) {
   const isCenter = slotIndex === 0;
   const metric = formatCompactMetric(item, rankMode);
   const title = item.title || getPageTitle(item.url || item.link);
@@ -191,58 +192,87 @@ function DeckLinkCard({ item, rankNumber, slotIndex, rankMode, palette, isDark }
       className={`lc-slot-card ${SLOT_CLASS_BY_INDEX[slotIndex]}`}
       style={{
         position: 'absolute',
-        width: isCenter ? '184px' : '130px',
-        height: isCenter ? '194px' : '168px',
-        borderRadius: isCenter ? '15px' : '13px',
+        width: '184px',
+        height: '194px',
+        borderRadius: '15px',
         background: frameBg,
-        border: `${isCenter ? '2px' : '1.5px'} solid ${trimColor}`,
-        padding: isCenter ? '5px' : '4px',
+        border: `2px solid ${trimColor}`,
+        padding: '5px',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        boxShadow: isCenter
-          ? (isDark ? '0 18px 34px rgba(0, 0, 0, 0.72)' : '0 14px 28px rgba(15, 23, 42, 0.18)')
-          : (isDark ? '0 10px 22px rgba(0, 0, 0, 0.6)' : '0 8px 18px rgba(15, 23, 42, 0.15)'),
-        display: 'flex',
-        flexDirection: 'column',
+        boxShadow: isDark
+          ? '0 14px 28px rgba(0, 0, 0, 0.68)'
+          : '0 12px 24px rgba(15, 23, 42, 0.16)',
       }}
     >
-      {isCenter && <div className="lc-foil-sheen" aria-hidden="true" />}
+      <div
+        className="lc-foil-sheen"
+        aria-hidden="true"
+        style={{ opacity: isCenter ? 1 : 0 }}
+      />
 
       <div
         style={{
-          flex: 1,
-          borderRadius: isCenter ? '10px' : '9px',
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          borderRadius: '10px',
           border: `1px solid ${trimColor}`,
           overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
           backgroundColor: surfaceBg,
-          position: 'relative',
         }}
       >
-        {/* Side cards keep their compact top header bar; front hero keeps full clear thumbnail */}
-        {!isCenter && (
+        {/* Fixed-height upper thumbnail showcase (identical geometry in every slot) */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '124px',
+            overflow: 'hidden',
+            borderBottom: `1.5px solid ${trimColor}`,
+          }}
+        >
+          <CardArtwork item={item} />
+
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: isDark
+                ? 'linear-gradient(180deg, rgba(12,12,18,0.34) 0%, transparent 45%, rgba(16,15,22,0.42) 100%)'
+                : 'linear-gradient(180deg, rgba(15,23,42,0.24) 0%, transparent 45%, rgba(15,23,42,0.28) 100%)',
+            }}
+          />
+
+          {/* Floating Rank / Metric Badges (solid high-contrast pill — zero backdrop-filter stall) */}
           <div
             style={{
+              position: 'absolute',
+              top: '6px',
+              left: '6px',
+              right: '6px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '3px 6px',
-              backgroundColor: isDark ? 'rgba(0,0,0,0.45)' : 'rgba(15,23,42,0.04)',
-              borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,23,42,0.07)'}`,
               gap: '4px',
-              flexShrink: 0,
+              zIndex: 2,
             }}
           >
             <span
               style={{
-                fontSize: '8.5px',
+                fontSize: '9.5px',
                 fontWeight: '800',
+                padding: '2px 7px',
+                borderRadius: '999px',
+                backgroundColor: 'rgba(10, 10, 16, 0.86)',
                 color: trimColor,
-                letterSpacing: '0.02em',
+                border: `1px solid ${trimColor}`,
               }}
             >
-              #{rankNumber}
+              {isCenter ? `TOP #${rankNumber}` : `#${rankNumber}`}
             </span>
             {metric ? (
               <span
@@ -250,19 +280,27 @@ function DeckLinkCard({ item, rankNumber, slotIndex, rankMode, palette, isDark }
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '2px',
-                  fontSize: '8.5px',
+                  fontSize: '9.5px',
                   fontWeight: '700',
+                  padding: '2px 7px',
+                  borderRadius: '999px',
+                  backgroundColor: 'rgba(10, 10, 16, 0.86)',
                   color: metric.icon === 'star' ? '#FBBF24' : '#38BDF8',
                 }}
               >
-                {metric.icon === 'star' ? <Star size={8} fill="currentColor" /> : <Eye size={8} />}
+                {metric.icon === 'star' ? <Star size={9} fill="currentColor" /> : <Eye size={9} />}
                 {metric.text}
               </span>
             ) : (
               <span
                 style={{
-                  fontSize: '8px',
-                  color: isDark ? '#94a3b8' : '#64748b',
+                  fontSize: '9px',
+                  fontWeight: '600',
+                  padding: '2px 6px',
+                  borderRadius: '999px',
+                  backgroundColor: 'rgba(10, 10, 16, 0.8)',
+                  color: '#e2e8f0',
+                  maxWidth: '72px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -272,127 +310,60 @@ function DeckLinkCard({ item, rankNumber, slotIndex, rankMode, palette, isDark }
               </span>
             )}
           </div>
-        )}
-
-        {/* Card Thumbnail Area */}
-        <div
-          style={{
-            position: 'relative',
-            flex: isCenter ? '0 0 124px' : 1,
-            minHeight: 0,
-            overflow: 'hidden',
-            borderBottom: isCenter ? `1.5px solid ${trimColor}` : 'none',
-          }}
-        >
-          <CardArtwork item={item} compact={!isCenter} />
-
-          {/* Floating Rank / Metric Micro Badges on Front Card (no link title overlay) */}
-          {isCenter && (
-            <>
-              <div
-                aria-hidden="true"
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: isDark
-                    ? 'linear-gradient(180deg, rgba(12,12,18,0.28) 0%, transparent 40%, rgba(16,15,22,0.42) 100%)'
-                    : 'linear-gradient(180deg, rgba(15,23,42,0.22) 0%, transparent 40%, rgba(15,23,42,0.28) 100%)',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '5px',
-                  left: '6px',
-                  right: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '4px',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '9px',
-                    fontWeight: '800',
-                    padding: '2px 6px',
-                    borderRadius: '999px',
-                    backgroundColor: 'rgba(10, 10, 16, 0.76)',
-                    color: trimColor,
-                    border: `1px solid ${trimColor}`,
-                    backdropFilter: 'blur(4px)',
-                  }}
-                >
-                  TOP #{rankNumber}
-                </span>
-                {metric && (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '2px',
-                      fontSize: '9px',
-                      fontWeight: '700',
-                      padding: '2px 6px',
-                      borderRadius: '999px',
-                      backgroundColor: 'rgba(10, 10, 16, 0.76)',
-                      color: metric.icon === 'star' ? '#FBBF24' : '#38BDF8',
-                      backdropFilter: 'blur(4px)',
-                    }}
-                  >
-                    {metric.icon === 'star' ? <Star size={9} fill="currentColor" /> : <Eye size={9} />}
-                    {metric.text}
-                  </span>
-                )}
-              </div>
-            </>
-          )}
         </div>
 
-        {/* Side cards keep concise title footer; front card omits link title to spotlight the tag plate */}
-        {!isCenter && (
+        {/* Lower card title strip smoothly fades out when card enters Center slot behind tag nameplate */}
+        <div
+          data-card-footer="true"
+          style={{
+            position: 'absolute',
+            top: '124px',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            padding: '7px 9px',
+            backgroundColor: surfaceBg,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            opacity: isCenter ? 0 : 1,
+            transition: 'opacity 0.28s ease',
+            pointerEvents: 'none',
+          }}
+        >
           <div
             style={{
-              padding: '5px 6px',
-              backgroundColor: surfaceBg,
-              borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'}`,
-              flexShrink: 0,
+              fontSize: '11px',
+              fontWeight: '600',
+              lineHeight: '1.22',
+              color: isDark ? '#f4f4f5' : '#0f172a',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
             }}
           >
-            <div
-              style={{
-                fontSize: '9.5px',
-                fontWeight: '600',
-                lineHeight: '1.22',
-                color: isDark ? '#f4f4f5' : '#0f172a',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}
-            >
-              {title}
-            </div>
-            <div
-              style={{
-                marginTop: '2px',
-                fontSize: '8px',
-                color: isDark ? '#71717a' : '#94a3b8',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {domain}
-            </div>
+            {title}
           </div>
-        )}
+          <div
+            style={{
+              marginTop: '3px',
+              fontSize: '9px',
+              color: isDark ? '#71717a' : '#94a3b8',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {domain}
+          </div>
+        </div>
       </div>
     </div>
   );
-}
+});
 
-function TagDeckCard({ tagEntry, rankIndex, rankMode, activeRotation, onSelectTag, theme }) {
+const TagDeckCard = React.memo(function TagDeckCard({ tagEntry, rankIndex, rankMode, activeRotation, onSelectTag, theme }) {
   const colors = themes[theme] || themes.dark;
   const isDark = theme === 'dark';
   const palette = useMemo(() => getDeckPalette(tagEntry.tag), [tagEntry.tag]);
@@ -599,7 +570,7 @@ function TagDeckCard({ tagEntry, rankIndex, rankMode, activeRotation, onSelectTa
       </div>
     </button>
   );
-}
+});
 
 export function TagsPage({ links = [], onSelectTag, onBack, theme = 'dark' }) {
   const colors = themes[theme] || themes.dark;
@@ -692,49 +663,51 @@ export function TagsPage({ links = [], onSelectTag, onBack, theme = 'dark' }) {
       }}
     >
       <style>{`
+        .lc-tag-deck {
+          contain: layout style;
+        }
         .lc-tag-deck .lc-slot-card,
         .lc-tag-deck .lc-center-nameplate,
         .lc-tag-deck .lc-deck-crest,
         .lc-tag-deck .lc-deck-aura {
-          transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1),
-                      width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-                      height 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-                      opacity 0.42s ease,
-                      box-shadow 0.45s ease;
+          will-change: transform, opacity;
+          backface-visibility: hidden;
+          transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1),
+                      opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        /* 5-Card Symmetrical Ring Slot Coordinates (Rest) */
+        /* 5-Card Pure GPU Symmetrical Slot Coordinates (Zero Layout Reflow) */
         .lc-tag-deck .lc-slot-center {
           z-index: 4;
           opacity: 1;
-          transform: translate(0px, -2px) rotate(0deg) scale(1);
+          transform: translate3d(0px, -2px, 0) rotate(0deg) scale(1);
         }
         .lc-tag-deck .lc-slot-inner-left {
           z-index: 2;
           opacity: 0.98;
           transform-origin: 50% 88%;
-          transform: translate(-54px, 5px) rotate(-12deg) scale(0.95);
+          transform: translate3d(-52px, 6px, 0) rotate(-13deg) scale(0.8);
         }
         .lc-tag-deck .lc-slot-inner-right {
           z-index: 2;
           opacity: 0.98;
           transform-origin: 50% 88%;
-          transform: translate(54px, 5px) rotate(12deg) scale(0.95);
+          transform: translate3d(52px, 6px, 0) rotate(13deg) scale(0.8);
         }
         .lc-tag-deck .lc-slot-outer-left {
           z-index: 1;
           opacity: 0.9;
           transform-origin: 50% 90%;
-          transform: translate(-74px, 14px) rotate(-21deg) scale(0.88);
+          transform: translate3d(-76px, 14px, 0) rotate(-21deg) scale(0.72);
         }
         .lc-tag-deck .lc-slot-outer-right {
           z-index: 0;
           opacity: 0.9;
           transform-origin: 50% 90%;
-          transform: translate(74px, 14px) rotate(21deg) scale(0.88);
+          transform: translate3d(76px, 14px, 0) rotate(21deg) scale(0.72);
         }
         .lc-tag-deck .lc-center-nameplate {
-          transform: translate(0px, -2px) scale(1);
+          transform: translate3d(0px, -2px, 0) scale(1);
         }
 
         /* Clipped Metallic Foil Sheen */
@@ -747,42 +720,41 @@ export function TagsPage({ links = [], onSelectTag, onBack, theme = 'dark' }) {
             rgba(255, 255, 255, 0.22) 48%,
             transparent 60%
           );
-          transform: translateX(-110%) rotate(14deg);
+          transform: translate3d(-110%, 0, 0) rotate(14deg);
           pointer-events: none;
           z-index: 6;
-          transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+          transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
         }
 
-        /* Synchronized Hover & Keyboard Focus Fan Spread */
+        /* Synchronized Hover & Keyboard Focus Fan Spread (Pure GPU Transform) */
         .lc-tag-deck:hover .lc-deck-aura,
         .lc-tag-deck:focus-visible .lc-deck-aura {
-          opacity: 0.74;
+          opacity: 0.78;
         }
         .lc-tag-deck:hover .lc-slot-center,
         .lc-tag-deck:focus-visible .lc-slot-center {
-          transform: translate(0px, -9px) rotate(0deg) scale(1.04);
-          box-shadow: 0 22px 42px var(--lc-deck-glow), 0 12px 24px rgba(0, 0, 0, 0.45);
+          transform: translate3d(0px, -9px, 0) rotate(0deg) scale(1.04);
         }
         .lc-tag-deck:hover .lc-center-nameplate,
         .lc-tag-deck:focus-visible .lc-center-nameplate {
-          transform: translate(0px, -9px) scale(1.04);
+          transform: translate3d(0px, -9px, 0) scale(1.04);
         }
         .lc-tag-deck:hover .lc-slot-inner-left,
         .lc-tag-deck:focus-visible .lc-slot-inner-left {
-          transform: translate(-66px, -4px) rotate(-17deg) scale(0.99);
+          transform: translate3d(-66px, -3px, 0) rotate(-17deg) scale(0.84);
         }
         .lc-tag-deck:hover .lc-slot-inner-right,
         .lc-tag-deck:focus-visible .lc-slot-inner-right {
-          transform: translate(66px, -4px) rotate(17deg) scale(0.99);
+          transform: translate3d(66px, -3px, 0) rotate(17deg) scale(0.84);
         }
         .lc-tag-deck:hover .lc-slot-outer-left,
         .lc-tag-deck:focus-visible .lc-slot-outer-left {
-          transform: translate(-90px, 6px) rotate(-27deg) scale(0.93);
+          transform: translate3d(-92px, 6px, 0) rotate(-26deg) scale(0.76);
           opacity: 0.98;
         }
         .lc-tag-deck:hover .lc-slot-outer-right,
         .lc-tag-deck:focus-visible .lc-slot-outer-right {
-          transform: translate(90px, 6px) rotate(27deg) scale(0.93);
+          transform: translate3d(92px, 6px, 0) rotate(26deg) scale(0.76);
           opacity: 0.98;
         }
         .lc-tag-deck:hover .lc-deck-crest,
@@ -791,7 +763,7 @@ export function TagsPage({ links = [], onSelectTag, onBack, theme = 'dark' }) {
         }
         .lc-tag-deck:hover .lc-foil-sheen,
         .lc-tag-deck:focus-visible .lc-foil-sheen {
-          transform: translateX(115%) rotate(14deg);
+          transform: translate3d(115%, 0, 0) rotate(14deg);
         }
         .lc-tag-deck:focus-visible {
           box-shadow: 0 0 0 2px ${colors.accent};
@@ -1036,7 +1008,7 @@ export function TagsPage({ links = [], onSelectTag, onBack, theme = 'dark' }) {
                 tagEntry={entry}
                 rankIndex={idx}
                 rankMode={rankMode}
-                activeRotation={rotationTick}
+                activeRotation={entry.topLinks.length > 1 ? rotationTick : 0}
                 onSelectTag={onSelectTag}
                 theme={theme}
               />

@@ -146,33 +146,38 @@ async function runTagsPageVerification() {
       const leftCard = el.querySelector('[data-card-slot="1"]');
       const outerRightCard = el.querySelector('[data-card-slot="3"]');
       const deckText = el.textContent || '';
-      const centerText = centerCard?.textContent || '';
+      const centerFooter = centerCard?.querySelector('[data-card-footer="true"]');
+      const leftStyle = getComputedStyle(leftCard);
+      const centerStyle = getComputedStyle(centerCard);
       return {
         slotCount: slotCards.length,
         hasOpenDeckBtn: deckText.includes('Open Deck'),
-        frontCardHasLinkTitle: centerText.includes('Attention Is All You Need Paper'),
+        frontFooterVisible: centerFooter ? Number(getComputedStyle(centerFooter).opacity) > 0.01 : false,
+        invariantBoxSizes: leftStyle.width === centerStyle.width && leftStyle.height === centerStyle.height,
         frontCardRect: centerCard?.getBoundingClientRect(),
         leftCardRect: leftCard?.getBoundingClientRect(),
         deckRect: el.getBoundingClientRect(),
         outerRightText: outerRightCard?.textContent || '',
         beforeStep: el.getAttribute('data-front-card-step'),
         beforeFrontLink: el.getAttribute('data-front-link-id'),
-        beforeLeftTransform: getComputedStyle(leftCard).transform,
-        beforeCenterTransform: getComputedStyle(centerCard).transform,
+        beforeLeftTransform: leftStyle.transform,
+        beforeCenterTransform: centerStyle.transform,
       };
     });
     assert(
-      'Tag deck renders 5 populated link cards with bigger unobstructed front card and no Open Deck button',
+      'Tag deck renders 5 uniform GPU cards (invariant box sizes), bigger unobstructed front card, no Open Deck',
       previewCardDetails.slotCount === 5 &&
         !previewCardDetails.hasOpenDeckBtn &&
-        !previewCardDetails.frontCardHasLinkTitle &&
+        !previewCardDetails.frontFooterVisible &&
+        previewCardDetails.invariantBoxSizes &&
         previewCardDetails.frontCardRect.width >= 180 &&
         previewCardDetails.deckRect.height <= 260 &&
         previewCardDetails.outerRightText.includes('#5'),
       JSON.stringify({
         slotCount: previewCardDetails.slotCount,
         hasOpenDeckBtn: previewCardDetails.hasOpenDeckBtn,
-        frontCardHasLinkTitle: previewCardDetails.frontCardHasLinkTitle,
+        frontFooterVisible: previewCardDetails.frontFooterVisible,
+        invariantBoxSizes: previewCardDetails.invariantBoxSizes,
         frontWidth: Math.round(previewCardDetails.frontCardRect.width),
         deckHeight: Math.round(previewCardDetails.deckRect.height),
       })
