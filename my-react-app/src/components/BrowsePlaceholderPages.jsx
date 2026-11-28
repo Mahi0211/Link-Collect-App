@@ -1,5 +1,5 @@
 import React from 'react';
-import { Folder, Tag, ChevronRight, ArrowLeft, Layers } from 'lucide-react';
+import { Folder, ChevronRight, ArrowLeft, Layers } from 'lucide-react';
 import { themes } from '../utils/themes';
 
 function BrowseDirectoryPlaceholder({
@@ -210,22 +210,6 @@ export function CollectionsPlaceholderPage({ collectionsCount = 0, onBack, theme
       icon={Folder}
       count={collectionsCount}
       itemLabel={collectionsCount === 1 ? 'Collection' : 'Collections'}
-      onBack={onBack}
-      theme={theme}
-    />
-  );
-}
-
-export function TagsPlaceholderPage({ tagsCount = 0, onBack, theme = 'dark' }) {
-  return (
-    <BrowseDirectoryPlaceholder
-      testId="tags-placeholder-page"
-      breadcrumbLabel="Tags"
-      title="All Tags"
-      subtitle="Dedicated workspace route for exploring, managing, and filtering all your bookmark tags."
-      icon={Tag}
-      count={tagsCount}
-      itemLabel={tagsCount === 1 ? 'Tag' : 'Tags'}
       onBack={onBack}
       theme={theme}
     />

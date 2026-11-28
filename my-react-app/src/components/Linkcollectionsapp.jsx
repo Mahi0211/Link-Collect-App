@@ -44,7 +44,8 @@ import { FriendsModal } from './FriendsModal';
 import { SaveToCollectionModal } from './SaveToCollectionModal';
 import { EditProfilePage } from './EditProfilePage';
 import { ChatComingSoonPage } from './ChatComingSoonPage';
-import { CollectionsPlaceholderPage, TagsPlaceholderPage } from './BrowsePlaceholderPages';
+import { CollectionsPlaceholderPage } from './BrowsePlaceholderPages';
+import { TagsPage } from './TagsPage';
 import { getDomainName, getPageTitle, detectMediaType } from '../utils/linkUtils';
 import { api } from '../utils/api';
 
@@ -1342,7 +1343,13 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
         totalLinkCount={allLinks.length}
         collectionCounts={collectionCounts}
         selectedTag={selectedTag}
-        onSelectTag={setSelectedTag}
+        onSelectTag={(tag) => {
+          setSelectedTag(tag);
+          if (tag && ['tags', 'collections', 'editProfile', 'chat'].includes(activeView)) {
+            setActiveView('all');
+            setFilters(INITIAL_FILTERS);
+          }
+        }}
         allTags={allTags}
         theme={theme}
         isOpen={isSidebarOpen}
@@ -1446,8 +1453,13 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
             theme={theme}
           />
         ) : activeView === 'tags' ? (
-          <TagsPlaceholderPage
-            tagsCount={allTags.length}
+          <TagsPage
+            links={allLinks}
+            onSelectTag={(tag) => {
+              setSelectedTag(tag);
+              setFilters(INITIAL_FILTERS);
+              setActiveView('all');
+            }}
             onBack={() => setActiveView('all')}
             theme={theme}
           />
@@ -1531,20 +1543,41 @@ export default function LinkCollectionsApp({ data, onLogout, theme: initialTheme
                   </span>
                 )}
                 {selectedTag && (
-                  <button
-                    onClick={() => setSelectedTag(null)}
-                    style={{
-                      background: 'none',
-                      border: `1px solid ${colors.border}`,
-                      color: colors.textTertiary,
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Clear Filter
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setSelectedTag(null)}
+                      style={{
+                        background: 'none',
+                        border: `1px solid ${colors.border}`,
+                        color: colors.textTertiary,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Clear Filter
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedTag(null);
+                        setFilters(INITIAL_FILTERS);
+                        setActiveView('tags');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: `1px solid ${colors.border}`,
+                        color: colors.accent,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ← All Tags
+                    </button>
+                  </>
                 )}
               </div>
               <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: colors.textSecondary }}>

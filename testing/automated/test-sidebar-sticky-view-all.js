@@ -237,10 +237,10 @@ async function runStickyHeaderViewAllTests() {
       JSON.stringify(tagsStuckMetrics)
     );
 
-    // 7. Context-aware click on Tags tab -> dedicated Tags placeholder page (separate from Collections page)
+    // 7. Context-aware click on Tags tab -> dedicated Tags page (separate from Collections page)
     await viewAllBtn.first().click();
     await page.waitForTimeout(300);
-    const tagsPageVisible = await page.locator('[data-testid="tags-placeholder-page"]').isVisible();
+    const tagsPageVisible = await page.locator('[data-testid="tags-page"]').isVisible();
     const colsPageCountOnTags = await page.locator('[data-testid="collections-placeholder-page"]').count();
     assert(
       'Clicking View All while Tags tab active navigates to separate dedicated Tags page',
