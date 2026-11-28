@@ -138,40 +138,71 @@ async function runTagsPageVerification() {
       JSON.stringify(orderedDeckStats)
     );
 
-    // 2. Verify AI-Research deck has 3 preview cards (Left #2, Center #1, Right #3)
+    // 2. Verify AI-Research deck has 5 uniform populated cards (no Open Deck, bigger front card, no front link title)
     const firstDeck = page.locator('[data-testid="tag-deck-AI-Research"]').first();
     const previewCardDetails = await firstDeck.evaluate((el) => {
-      const hasTop1 = el.textContent?.includes('TOP #1');
-      const leftCardText = el.querySelector('.lc-card-left')?.textContent || '';
-      const rightCardText = el.querySelector('.lc-card-right')?.textContent || '';
-      const beforeLeftTransform = getComputedStyle(el.querySelector('.lc-card-left')).transform;
-      const beforeCenterTransform = getComputedStyle(el.querySelector('.lc-card-center')).transform;
+      const slotCards = Array.from(el.querySelectorAll('[data-card-slot]'));
+      const centerCard = el.querySelector('[data-card-slot="0"]');
+      const leftCard = el.querySelector('[data-card-slot="1"]');
+      const outerRightCard = el.querySelector('[data-card-slot="3"]');
+      const deckText = el.textContent || '';
+      const centerText = centerCard?.textContent || '';
       return {
-        hasTop1,
-        hasRank2: leftCardText.includes('#2'),
-        hasRank3: rightCardText.includes('#3'),
-        beforeLeftTransform,
-        beforeCenterTransform,
+        slotCount: slotCards.length,
+        hasOpenDeckBtn: deckText.includes('Open Deck'),
+        frontCardHasLinkTitle: centerText.includes('Attention Is All You Need Paper'),
+        frontCardRect: centerCard?.getBoundingClientRect(),
+        leftCardRect: leftCard?.getBoundingClientRect(),
+        deckRect: el.getBoundingClientRect(),
+        outerRightText: outerRightCard?.textContent || '',
+        beforeStep: el.getAttribute('data-front-card-step'),
+        beforeFrontLink: el.getAttribute('data-front-link-id'),
+        beforeLeftTransform: getComputedStyle(leftCard).transform,
+        beforeCenterTransform: getComputedStyle(centerCard).transform,
       };
     });
     assert(
-      'Tag deck showcases 3 ranked cards (TOP #1 center + #2 left + #3 right)',
-      previewCardDetails.hasTop1 && previewCardDetails.hasRank2 && previewCardDetails.hasRank3,
-      JSON.stringify(previewCardDetails)
+      'Tag deck renders 5 populated link cards with bigger unobstructed front card and no Open Deck button',
+      previewCardDetails.slotCount === 5 &&
+        !previewCardDetails.hasOpenDeckBtn &&
+        !previewCardDetails.frontCardHasLinkTitle &&
+        previewCardDetails.frontCardRect.width >= 180 &&
+        previewCardDetails.deckRect.height <= 260 &&
+        previewCardDetails.outerRightText.includes('#5'),
+      JSON.stringify({
+        slotCount: previewCardDetails.slotCount,
+        hasOpenDeckBtn: previewCardDetails.hasOpenDeckBtn,
+        frontCardHasLinkTitle: previewCardDetails.frontCardHasLinkTitle,
+        frontWidth: Math.round(previewCardDetails.frontCardRect.width),
+        deckHeight: Math.round(previewCardDetails.deckRect.height),
+      })
     );
 
-    // Capture Light mode screenshot before hover & Dark mode
+    // Capture Light mode screenshot before hover
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TAGS-PAGE-001-light-decks.png') });
 
-    // 3. Test hover animation on AI-Research deck
-    await firstDeck.hover();
-    await page.waitForTimeout(450);
-    const hoverTransforms = await firstDeck.evaluate((el) => ({
-      afterLeftTransform: getComputedStyle(el.querySelector('.lc-card-left')).transform,
-      afterCenterTransform: getComputedStyle(el.querySelector('.lc-card-center')).transform,
+    // 3. Verify 3-second automatic card rotation switches the front card smoothly
+    await page.waitForTimeout(3300);
+    const rotatedState = await firstDeck.evaluate((el) => ({
+      afterStep: el.getAttribute('data-front-card-step'),
+      afterFrontLink: el.getAttribute('data-front-link-id'),
     }));
     assert(
-      'Hovering tag deck animates center elevation and wing fan-out',
+      'Deck cards automatically rotate to the next front card after 3 seconds',
+      rotatedState.afterStep !== previewCardDetails.beforeStep &&
+        rotatedState.afterFrontLink !== previewCardDetails.beforeFrontLink,
+      JSON.stringify({ before: previewCardDetails.beforeFrontLink, after: rotatedState.afterFrontLink, step: rotatedState.afterStep })
+    );
+
+    // 4. Test hover animation spreads outer wings and lifts center card cleanly
+    await firstDeck.hover();
+    await page.waitForTimeout(550);
+    const hoverTransforms = await firstDeck.evaluate((el) => ({
+      afterLeftTransform: getComputedStyle(el.querySelector('[data-card-slot="1"]')).transform,
+      afterCenterTransform: getComputedStyle(el.querySelector('[data-card-slot="0"]')).transform,
+    }));
+    assert(
+      'Hovering tag deck animates center elevation and 5-card fan spread',
       hoverTransforms.afterLeftTransform !== previewCardDetails.beforeLeftTransform &&
         hoverTransforms.afterCenterTransform !== previewCardDetails.beforeCenterTransform,
       JSON.stringify(hoverTransforms)
@@ -183,21 +214,21 @@ async function runTagsPageVerification() {
       await themeToggle.click();
       await page.waitForTimeout(350);
       await firstDeck.hover();
-      await page.waitForTimeout(450);
+      await page.waitForTimeout(550);
       await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'TAGS-PAGE-002-dark-hover-decks.png') });
     }
 
-    // 4. Test Most Viewed vs Top Rated top-3 switcher inside TagsPage
+    // 5. Test Most Viewed vs Top Rated top-5 switcher inside TagsPage
     const tagsPage = page.locator('[data-testid="tags-page"]').first();
     await tagsPage.locator('button:has-text("Most Viewed")').first().click();
     await page.waitForTimeout(200);
-    const mostViewedDeckText = await firstDeck.textContent();
+    const mostViewedSlots = await firstDeck.locator('[data-card-slot]').count();
     await tagsPage.locator('button:has-text("Top Rated")').first().click();
     await page.waitForTimeout(200);
-    const topRatedDeckText = await firstDeck.textContent();
+    const topRatedSlots = await firstDeck.locator('[data-card-slot]').count();
     assert(
-      'Top-3 preview ranking controls render and work interactively',
-      Boolean(mostViewedDeckText?.includes('Attention') && topRatedDeckText?.includes('Attention'))
+      'Top-5 preview ranking controls render and preserve 5-card deck interactively',
+      mostViewedSlots === 5 && topRatedSlots === 5
     );
 
     // 5. Clicking a Tag Deck opens that tag's collection of links
